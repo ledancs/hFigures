@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <script src="http://d3js.org/d3.v3.js" charset="utf-8"></script>
+    <script src="data.js" charset="utf-8"></script>
+    <style type="text/css">
+
+        body {
+
+        }
+
+        svg {
+            margin-left:auto;
+            margin-right: auto;
+            display: inline-block;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        div.hgraph-container {
+            margin: 0;
+            padding: 0;
+            height: 97%;
+            width: 97%;
+            display: inline-block;
+            position: absolute;
+            vertical-align: middle;
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="hgraph-container" class="hgraph-container"></div>
+
+</body>
+<script type="application/javascript">
+    var dataset = groups; // how many measurements per group
+
+    var pie = d3.layout.pie().value(function (d) {
+        return d.measurements.length;
+    }).sort(null);
+    pie.padAngle(Math.PI / 105);
+
+    var w = 800;
+    var h = 800;
+
+    var outerRadius = w/3;
+    var innerRadius = w/5;
+
+
+    var arc = d3.svg.arc()
+            .innerRadius(innerRadius)
+            .outerRadius(outerRadius);
+
+    var svg = d3.select("div#hgraph-container")
+            .append("svg")
+            .attr("viewBox", "0 0 " + w + " " + h);
+
+    var pieObjects = pie(dataset);
+
+    var hgraph = svg.append("g").attr("class", "hgraph");
+
+    var pointsData = [];
+    var polygonData = [];
+
+    var angleUnit = function (d, n) {
+        var start = d.startAngle + d.padAngle;
+        var end = d.endAngle - d.padAngle;
+
+        var space = end - start;
+        var unit = space / (n + 1);
+
+        return unit;
+    };
+
+    var arcs = hgraph.selectAll("g.arc")
+            .data(pieObjects)
+            .enter()
+            .append("g")
+            .attr("class", "arc");
+
+    arcs.append("path")
+            .attr({
+                "fill": "#74c476",
+                //"stroke": "#74c476",
+                "stroke": "none",
+                "d": arc
+            })
+            .each(function (d, i) {
+                var g = dataset[i];
+                var ms = g.measurements;
+                var n = ms.length;
+                var delta = angleUnit(d, n);
+                var sectionData = [];
+                var angle, m, scale, s, v, x, y, r;
+                for(var j = 0; j < n; j ++){
+                    m = ms[j];
+                    s = m.samples[1];
+                    v = s.value;
+                    angle = d.startAngle + d.padAngle + (j + 1) * delta;
+                    scale = d3.scale.linear()
+                            .domain([m.min, m.max])
+                            .range([innerRadius, outerRadius]);
+                    r = scale(v);
+                    x = Math.cos(angle) * r;
+                    y = Math.sin(angle) * r * -1;
+                    sectionData.push({angle: angle, r: r, x: x, y: y});
+                    polygonData.push([x, y]);
+                }
+                pointsData.push(sectionData);
+            });
+
+    var polygon = hgraph.append("g").attr("class", "polygon").selectAll("polygon")
+            .data([polygonData])
+            .enter().append("polygon")
+            .attr("points", function(d) {
+                // compute the coordinates
+                return d.join(" ");
+            }).attr({
+                "stroke": "black",
+                "stroke-width": 1.5,
+                "fill": "grey",
+                "fill-opacity": 0.35
+            });
+
+    var pointsGroup = hgraph.append("g").attr("class", "pointsGroup");
+
+    var pointsSection = pointsGroup.selectAll("g.pointsSection")
+            .data(pieObjects)
+            .enter()
+            .append("g")
+            .attr("class", "pointsSection");
+
+    // select the sample as well
+    pointsSection.selectAll("circle")
+            .data(function (d, i) {
+                return pointsData[i];
+            })
+            .enter()
+            .append("circle")
+            .attr({
+                "fill": "white",
+                "stroke": "black",
+                "r": 5
+            })
+            .attr("cx", function (d) {
+                return d.x;
+            })
+            .attr("cy", function (d) {
+                return d.y;
+            });
+
+    // move the hgraph
+    var translate = "translate(" + (w/2) + ", " + (h/2) + ")";
+    // flip the y axis
+    var scale = "scale(1, -1)";
+    // rotate
+    var rotate = "rotate(90)";
+    // all the transformations
+    var transformations = [translate, scale, rotate];
+    // apply
+    hgraph.attr("transform", transformations.join(" "));
+
+    pointsGroup.attr("transform", scale + " " + rotate);
+    polygon.attr("transform", scale + " " + rotate);
+
+    // console.log(points.join(" "));
+    function angle(d) {
+        var centroidAngle = (d.startAngle + d.endAngle)/2;
+        // Math.PI (rad) = 180 (deg)
+        // centroidAngle (rad) = x (deg)
+        var a = (centroidAngle * 180) / Math.PI;
+        // return a > 90 ? a - 180 : a;
+        return a;
+    }
+
+</script>
+</html>

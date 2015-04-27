@@ -358,5 +358,79 @@ var groups = [
                 ]
             }
         ]
+    },
+    {
+        label: "Sleep II",
+        measurements:[
+            {
+                min: 7,
+                max: 8,
+                units: "hours",
+                label: "Time in Bed",
+                samples: [
+                    {
+                        timestamp: 1420798224,
+                        value: 6.5
+                    },
+                    {
+                        timestamp: 1423742720,
+                        value: 7
+                    }
+                ]
+            },
+            {
+                min: 6,
+                max: 8,
+                units: "hours",
+                label: "Time actually asleep",
+                samples: [
+                    {
+                        timestamp: 1420798224,
+                        value: 6
+                    },
+                    {
+                        timestamp: 1423742720,
+                        value: 6.5
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        label: "Sleep III",
+        measurements:[
+            {
+                min: 7,
+                max: 8,
+                units: "hours",
+                label: "Time in Bed",
+                samples: [
+                    {
+                        timestamp: 1420798224,
+                        value: 6.5
+                    },
+                    {
+                        timestamp: 1423742720,
+                        value: 7
+                    }
+                ]
+            },
+            {
+                min: 6,
+                max: 8,
+                units: "hours",
+                label: "Time actually asleep",
+                samples: [
+                    {
+                        timestamp: 1420798224,
+                        value: 6
+                    },
+                    {
+                        timestamp: 1423742720,
+                        value: 6.5
+                    }
+                ]
+            }
+        ]
     }
 ];

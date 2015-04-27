@@ -15,38 +15,21 @@ var h = 800;
 
 var outerRadius = w * 0.25;
 var innerRadius = w * 0.165;
-var labelRadius = w * 0.35;
-
-var vBX0 = (w/2) * -1;
-var vBY0 = (h/2) * -1;
-
-var viewbBoxString = "" + vBX0 + " " + vBY0 + " " + w + " " + h;
+var labelRadius = w * 0.335;
 
 var arc = d3.svg.arc()
     .innerRadius(innerRadius)
     .outerRadius(outerRadius);
 
-var viewBoxString = "" + ((w/2) * -1).toString() +
-    " " + ((h/2) * -1).toString() +
-    " " + w.toString() +
-    " " + h.toString();
-
 var svg = d3.select("div#hgraph-container")
     .append("svg")
-    .attr("viewBox", viewbBoxString);
-
-var background = svg.append("circle")
-    .attr({
-        "cx": 0,
-        "cy": 0,
-        "r": labelRadius,
-        "stroke": "none",
-        "fill": "none"
-    });
+    .attr("viewBox", "0 0 " + w + " " + h);
 
 var pieObjects = pie(dataset);
 
-var hgraph = svg.append("g").attr("class", "hgraph");
+var hgraphWrapper = svg.append("g").attr("class", "hgraph-wrapper");
+
+var hgraph = hgraphWrapper.append("g").attr("class", "hgraph");
 
 var points = [];
 
@@ -135,9 +118,11 @@ var groupLabelsFrame = groupLabels.append("rect")
         "stroke-width": 1.5
     })
     .each(function (d) {
+        var dx = Math.cos(d.labelAngle) > 0 ? 0: this.getBBox().width;
+        var dy = Math.sin(d.labelAngle) > 0 ? this.getBBox().height: 0;
         d.line = [{
-            x: this.getBBox().x + this.getBBox().width/2,
-            y: this.getBBox().y + this.getBBox().height/2
+            x: this.getBBox().x + dx,
+            y: this.getBBox().y + dy
         }];
     });
 
@@ -157,6 +142,7 @@ groupLabels.attr("transform", function(d, i){
 
     return "translate(" + (w/2) + ", " + (h/2) + ")";
 });
+
 /*
 groupLabels.append("line")
     .attr("x1", function (d) {
@@ -202,8 +188,8 @@ groupLabels.append("path")
     })
     .each(function (d) {
         d.direction = true;
-    })
-    .call(transition);
+    });
+    //.call(transition);
 
 function transition(path){
     path.transition()
@@ -239,7 +225,13 @@ groupLabelsText.each(function(){
 // polygon
 
 var polygon = hgraph.append("g").attr("class", "polygon").selectAll("polygon")
-    .data([points])
+    .data(function () {
+        var coords = [];
+        for(var x in points){
+            coords.push(points[x].coords);
+        }
+        return [coords];
+    })
     .enter()
     .append("polygon")
     .attr("points", function(d) {
@@ -272,12 +264,110 @@ pointsSection.selectAll("circle")
         "r": 5
     })
     .attr("cx", function (d) {
-        return d[0];
+        return d.coords[0];
     })
     .attr("cy", function (d) {
-        return d[1];
+        return d.coords[1];
     });
 
+// labels for the circles
+
+var labels = hgraph.selectAll("g.labels")
+    .data(points)
+    .enter()
+    .append("g")
+    .attr("class", "labels");
+
+var labelsText = labels.append("text")
+    .text(function(d){
+        return d.measurement.label + ": " + d.sample.value + " " + d.measurement.units;
+    })
+    .each(function(d){
+        d.r = Math.max(d.radius + 7, outerRadius + 10);
+    })
+    .attr("text-anchor", "middle")
+    .attr("x", function(d){
+        return Math.cos(d.labelAngle) * d.r;
+    })
+    .attr("y", function(d){
+        return (Math.sin(d.labelAngle) * d.r * -1) + yRadius(d.labelAngle, w);
+    })
+    .attr("font-size", w * 0.0125)
+    .each(function (d) {
+        var bbox = this.getBBox()
+        d.bbox = bbox;
+    });
+
+var labelsFrame = labels.append("rect")
+    .attr("x", function(d){
+        return d.bbox.x - 5;
+    })
+    .attr("y", function (d) {
+        return d.bbox.y;
+    })
+    .attr("height", function (d) {
+        return d.bbox.height;
+    })
+    .attr("width", function (d) {
+        return d.bbox.width + 10;
+    })
+    .attr({
+        "rx": 5,
+        "ry": 5,
+        "stroke": "grey",
+        "fill": "#d5f5d5",
+        "stroke-width": 1.5
+    })
+    .each(function (d) {
+        var dx = Math.cos(d.labelAngle) > 0 ? 0: this.getBBox().width;
+        var dy = Math.sin(d.labelAngle) > 0 ? this.getBBox().height: 0;
+        d.line = [{
+            x: this.getBBox().x + dx,
+            y: this.getBBox().y + dy
+        }];
+    });
+
+
+// move them out of the background circle
+labels.attr("transform", function(d, i){
+    var w = this.getBBox().width * 1.065;
+    var h = this.getBBox().height * 1.065;
+
+    w *= Math.cos(d.labelAngle) > 0 ? 1: -1;
+    h *= Math.sin(d.labelAngle) > 0 ? -1: 1;
+
+    d.line.push({
+        x: (Math.cos(d.labelAngle) * (d.radius + 5)) - (w/2),
+        y: (Math.sin(d.labelAngle) * (d.radius + 5) * -1) - (h/2)
+    });
+
+    return "translate(" + (w/2) + ", " + (h/2) + ")";
+});
+labels.append("line")
+    .attr("x1", function (d) {
+        return d.line[0].x;
+    })
+    .attr("y1", function (d) {
+        return d.line[0].y;
+    })
+    .attr("x2", function (d) {
+        return d.line[1].x;
+    })
+    .attr("y2", function (d) {
+        return d.line[1].y;
+    })
+    .attr({
+        "stroke": "grey",
+        "stroke-width": 1
+    })
+    .style("stroke-dasharray", ("3, 3"));
+labelsFrame.each(function(){
+    this.parentNode.appendChild(this);
+});
+// move the labels on top of the rectangles
+labelsText.each(function(){
+    this.parentNode.appendChild(this);
+});
 // move the hgraph
 var translate = "translate(" + (w/2) + ", " + (h/2) + ")";
 // flip the y axis
@@ -290,6 +380,7 @@ var transformations = [scale, rotate];
 arcs.attr("transform", transformations.join(" "));
 //pointsGroup.attr("transform", scale + " " + rotate);
 //polygon.attr("transform", scale + " " + rotate);
+hgraph.attr("transform", translate);
 
 // console.log(points.join(" "));
 
@@ -313,7 +404,13 @@ function generatePoints(i, startAngle, padAngle, endAngle) {
         r = scale(v);
         x = Math.cos(angle) * r;
         y = Math.sin(angle) * r * -1;
-        pointsInSection.push([x, y]);
+        pointsInSection.push({
+            coords: [x, y],
+            radius: r,
+            labelAngle: angle,
+            measurement: m,
+            sample: s
+    });
     }
     return pointsInSection;
 }
@@ -333,3 +430,79 @@ function angle(startAngle, endAngle) {
     // return a > 90 ? a - 180 : a;
     return a;
 }
+
+function yRadius(angle, width){
+    var offset = 0;
+
+    if(Math.abs(angle % Math.PI) > (Math.PI/2) - (Math.PI/32) &&
+        Math.abs(angle % Math.PI) < (Math.PI/2) + (Math.PI/32)){
+        // console.log("32 " + measurement.label);
+        offset -= Math.sin(angle) * width * 0.1000;
+    } else if(Math.abs(angle % Math.PI) > (Math.PI/2) - (Math.PI/24) &&
+        Math.abs(angle % Math.PI) < (Math.PI/2) + (Math.PI/24)){
+        // console.log("24 " + measurement.label);
+        offset -= Math.sin(angle) * width * 0.0800;
+    } else if(Math.abs(angle % Math.PI) > (Math.PI/2) - (Math.PI/16) &&
+        Math.abs(angle % Math.PI) < (Math.PI/2) + (Math.PI/16)){
+        // console.log("16 " + measurement.label);
+        offset -= Math.sin(angle) * width * 0.0600;
+    } else if(Math.abs(angle % Math.PI) > (Math.PI/2) - (Math.PI/10) &&
+        Math.abs(angle % Math.PI) < (Math.PI/2) + (Math.PI/10)){
+        // console.log("8 " + measurement.label);
+        offset -= Math.sin(angle) * width * 0.0400;
+    } else if(Math.abs(angle % Math.PI) > (Math.PI/2) - (Math.PI/8) &&
+        Math.abs(angle % Math.PI) < (Math.PI/2) + (Math.PI/8)){
+        // console.log("8 " + measurement.label);
+        offset -= Math.sin(angle) * width * 0.0200;
+    } else if(Math.abs(angle % Math.PI) > (Math.PI/2) - (Math.PI/6) &&
+        Math.abs(angle % Math.PI) < (Math.PI/2) + (Math.PI/6)){
+        // console.log("6 " + measurement.label);
+        offset -= Math.sin(angle) * width * 0.0100;
+    } else if(Math.abs(angle % Math.PI) > (Math.PI/2) - (Math.PI/4) &&
+        Math.abs(angle % Math.PI) < (Math.PI/2) + (Math.PI/4)){
+        // console.log("6 " + measurement.label);
+        offset -= Math.sin(angle) * width * 0.0050;
+    }
+    return offset;
+}
+
+function isVisible(d3element){
+    var opacity = parseInt(d3element.attr("opacity"));
+    if(opacity == 0)
+        return false;
+    return true;
+}
+
+// show and hide
+labels.attr("opacity", 0);
+groupLabels.attr("opacity", 1);
+
+// zoom and pan
+pzlib.setup("hgraph-container");
+pzlib.deltaS = 0.20;
+pzlib.zoomLimit = 3;
+
+pzlib.afterZoom = function () {
+
+    if(this.zoomLevel > 2){
+        console.log("trigger!");
+        if(isVisible(groupLabels)){
+            console.log("group labels visible");
+            groupLabels.attr("opacity", 0.25);
+        }
+        if(!isVisible(labels)){
+            labels.attr("opacity", 1);
+        }
+    }
+
+    else {
+        if(!isVisible(groupLabels)){
+            groupLabels.attr("opacity", 1);
+        }
+        if(isVisible(labels)){
+            labels.attr("opacity", 0);
+        }
+    }
+
+    console.log("zoom level " + this.zoomLevel)
+};

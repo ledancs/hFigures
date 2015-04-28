@@ -185,6 +185,80 @@ var groups = [
         ]
     },
     {
+        label: "Activity II",
+        measurements:[
+            {
+                min: 6000,
+                max: 10000,
+                units: "steps",
+                label: "Steps per day",
+                samples: [
+                    {
+                        timestamp: 1420798224,
+                        value: 4952
+                    },
+                    {
+                        timestamp: 1423742720,
+                        value: 5013
+                    }
+                ]
+            },
+            {
+                min: 20,
+                max: 120,
+                units: "minutes per day",
+                label: "Exercise",
+                samples: [
+                    {
+                        timestamp: 1420798224,
+                        value: 20
+                    },
+                    {
+                        timestamp: 1423742720,
+                        value: 0
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        label: "Activity III",
+        measurements:[
+            {
+                min: 6000,
+                max: 10000,
+                units: "steps",
+                label: "Steps per day",
+                samples: [
+                    {
+                        timestamp: 1420798224,
+                        value: 4952
+                    },
+                    {
+                        timestamp: 1423742720,
+                        value: 5013
+                    }
+                ]
+            },
+            {
+                min: 20,
+                max: 120,
+                units: "minutes per day",
+                label: "Exercise",
+                samples: [
+                    {
+                        timestamp: 1420798224,
+                        value: 20
+                    },
+                    {
+                        timestamp: 1423742720,
+                        value: 0
+                    }
+                ]
+            }
+        ]
+    },
+    {
         label: "Lab Tests",
         measurements:[
             {

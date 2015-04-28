@@ -43,10 +43,10 @@ pzlib.setup = function(divId){
     pzlib.height = originalViewBox[3];
 
     pzlib.container.addEventListener("mousedown", pzlib.mouseDown);
-    pzlib.container.addEventListener("mouseup", pzlib.mouseUp);
+    document.addEventListener("mouseup", pzlib.mouseUp); // use document to listen outside the div
     pzlib.container.addEventListener("mousewheel", pzlib.zooming, false); // chrome
     pzlib.container.addEventListener("DOMMouseScroll", pzlib.zooming, false); // firefox
-    pzlib.container.addEventListener("mousemove", pzlib.mouseMoving);
+    document.addEventListener("mousemove", pzlib.mouseMoving); // here as well
 };
 
 pzlib.mouseDown = function(event){

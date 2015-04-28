@@ -15,7 +15,7 @@ var h = 800;
 
 var outerRadius = w * 0.25;
 var innerRadius = w * 0.165;
-var labelRadius = w * 0.335;
+var labelRadius = w * 0.32;
 
 var arc = d3.svg.arc()
     .innerRadius(innerRadius)
@@ -89,7 +89,8 @@ var groupLabelsText = groupLabels.append("text")
         return Math.cos(d.labelAngle) * labelRadius;
     })
     .attr("y", function(d){
-        return Math.sin(d.labelAngle) * labelRadius * -1;
+        return (Math.sin(d.labelAngle) * labelRadius * -1) + yRadius(d.labelAngle, w)/2;
+
     })
     .attr("font-size", w * 0.0275)
     .each(function (d) {
@@ -114,12 +115,13 @@ var groupLabelsFrame = groupLabels.append("rect")
         "rx": 5,
         "ry": 5,
         "stroke": "grey",
-        "fill": "#d5f5d5",
+        // "fill": "#d5f5d5",
+        "fill": "none",
         "stroke-width": 1.5
     })
     .each(function (d) {
         var dx = Math.cos(d.labelAngle) > 0 ? 0: this.getBBox().width;
-        var dy = Math.sin(d.labelAngle) > 0 ? this.getBBox().height: 0;
+        var dy = this.getBBox().height/2;
         d.line = [{
             x: this.getBBox().x + dx,
             y: this.getBBox().y + dy
@@ -142,27 +144,6 @@ groupLabels.attr("transform", function(d, i){
 
     return "translate(" + (w/2) + ", " + (h/2) + ")";
 });
-
-/*
-groupLabels.append("line")
-    .attr("x1", function (d) {
-        return d.line.x1;
-    })
-    .attr("y1", function (d) {
-        return d.line.y1;
-    })
-    .attr("x2", function (d) {
-        return d.line.x2;
-    })
-    .attr("y2", function (d) {
-        return d.line.y2;
-    })
-    .attr({
-        "stroke": "grey",
-        "stroke-width": 1
-    })
-    .style("stroke-dasharray", ("3, 3"));
-*/
 
 var lineFunction = d3.svg.line()
     .x(function (d) {
@@ -189,31 +170,8 @@ groupLabels.append("path")
     .each(function (d) {
         d.direction = true;
     });
-    //.call(transition);
 
-function transition(path){
-    path.transition()
-        .duration(1000)
-        .attrTween("stroke-dasharray", function(){
-            var d = d3.select(this).datum();
-            return tweenDash(d.direction);
-        })
-        .each("end", function () {
-            var d = d3.select(this).datum();
-            d.direction = !d.direction;
-            d3.select(this).call(transition);
-        })
-}
-
-function tweenDash(direction){
-    var i = direction ?
-        d3.interpolateString("3,8", "8,3"):
-        d3.interpolateString("8,3", "3,8");
-    return function(t){
-        return i(t);
-    }
-}
-
+// move the frame to the foreground
 groupLabelsFrame.each(function(){
     this.parentNode.appendChild(this);
 });
@@ -260,8 +218,8 @@ pointsSection.selectAll("circle")
     .attr({
         "fill": "white",
         "stroke": "#5b5b5b",
-        "stroke-width": 2,
-        "r": 5
+        "stroke-width": 1,
+        "r": 3
     })
     .attr("cx", function (d) {
         return d.coords[0];
@@ -283,7 +241,7 @@ var labelsText = labels.append("text")
         return d.measurement.label + ": " + d.sample.value + " " + d.measurement.units;
     })
     .each(function(d){
-        d.r = Math.max(d.radius + 7, outerRadius + 10);
+        d.r = Math.max(d.radius + 10, outerRadius + 10);
     })
     .attr("text-anchor", "middle")
     .attr("x", function(d){
@@ -312,15 +270,16 @@ var labelsFrame = labels.append("rect")
         return d.bbox.width + 10;
     })
     .attr({
-        "rx": 5,
-        "ry": 5,
+        "rx": 3,
+        "ry": 3,
         "stroke": "grey",
-        "fill": "#d5f5d5",
-        "stroke-width": 1.5
+        // "fill": "#d5f5d5",
+        "fill": "white",
+        "stroke-width": 0.75
     })
     .each(function (d) {
         var dx = Math.cos(d.labelAngle) > 0 ? 0: this.getBBox().width;
-        var dy = Math.sin(d.labelAngle) > 0 ? this.getBBox().height: 0;
+        var dy = this.getBBox().height/2;
         d.line = [{
             x: this.getBBox().x + dx,
             y: this.getBBox().y + dy
@@ -360,7 +319,7 @@ labels.append("line")
         "stroke": "grey",
         "stroke-width": 1
     })
-    .style("stroke-dasharray", ("3, 3"));
+    .style("stroke-dasharray", ("1, 1"));
 labelsFrame.each(function(){
     this.parentNode.appendChild(this);
 });
@@ -434,34 +393,27 @@ function angle(startAngle, endAngle) {
 function yRadius(angle, width){
     var offset = 0;
 
-    if(Math.abs(angle % Math.PI) > (Math.PI/2) - (Math.PI/32) &&
-        Math.abs(angle % Math.PI) < (Math.PI/2) + (Math.PI/32)){
-        // console.log("32 " + measurement.label);
-        offset -= Math.sin(angle) * width * 0.1000;
-    } else if(Math.abs(angle % Math.PI) > (Math.PI/2) - (Math.PI/24) &&
-        Math.abs(angle % Math.PI) < (Math.PI/2) + (Math.PI/24)){
-        // console.log("24 " + measurement.label);
-        offset -= Math.sin(angle) * width * 0.0800;
-    } else if(Math.abs(angle % Math.PI) > (Math.PI/2) - (Math.PI/16) &&
-        Math.abs(angle % Math.PI) < (Math.PI/2) + (Math.PI/16)){
-        // console.log("16 " + measurement.label);
-        offset -= Math.sin(angle) * width * 0.0600;
-    } else if(Math.abs(angle % Math.PI) > (Math.PI/2) - (Math.PI/10) &&
-        Math.abs(angle % Math.PI) < (Math.PI/2) + (Math.PI/10)){
-        // console.log("8 " + measurement.label);
-        offset -= Math.sin(angle) * width * 0.0400;
-    } else if(Math.abs(angle % Math.PI) > (Math.PI/2) - (Math.PI/8) &&
-        Math.abs(angle % Math.PI) < (Math.PI/2) + (Math.PI/8)){
-        // console.log("8 " + measurement.label);
-        offset -= Math.sin(angle) * width * 0.0200;
-    } else if(Math.abs(angle % Math.PI) > (Math.PI/2) - (Math.PI/6) &&
-        Math.abs(angle % Math.PI) < (Math.PI/2) + (Math.PI/6)){
-        // console.log("6 " + measurement.label);
-        offset -= Math.sin(angle) * width * 0.0100;
-    } else if(Math.abs(angle % Math.PI) > (Math.PI/2) - (Math.PI/4) &&
-        Math.abs(angle % Math.PI) < (Math.PI/2) + (Math.PI/4)){
-        // console.log("6 " + measurement.label);
-        offset -= Math.sin(angle) * width * 0.0050;
+    var steps = [
+        {fraction: 4,  value: 0.0050},
+        {fraction: 6,  value: 0.0075},
+        {fraction: 8,  value: 0.0100},
+        {fraction: 10, value: 0.0075},
+        {fraction: 16, value: 0.0050},
+        {fraction: 24, value: 0.0050},
+        {fraction: 32, value: 0.0075}
+    ];
+
+    var rangeA, rangeB, adjustedAngle;
+
+    for(var i = 0; i < steps.length; i++){
+
+        rangeA = Math.PI/2 - Math.PI/steps[i].fraction;
+        rangeB = Math.PI/2 + Math.PI/steps[i].fraction;
+        adjustedAngle = Math.abs(angle % Math.PI);
+
+        if(adjustedAngle > rangeA && adjustedAngle < rangeB){
+            offset -= Math.sin(angle) * width * steps[i].value;
+        }
     }
     return offset;
 }
@@ -473,34 +425,58 @@ function isVisible(d3element){
     return true;
 }
 
+var done = 0;
+
+function animateOpacity(d3element, val){
+    pzlib.allowZoom = false;
+    d3element
+        .transition()
+        .attr("opacity", val)
+        .duration(1300)
+        .call(endAll, function() {
+            done++;
+            if(done === 2){
+                done = 0;
+                pzlib.allowZoom = true;
+            }
+        });
+}
+
+function endAll(transition, callback) {
+    if (transition.size() === 0) { callback() }
+    var n = 0;
+    transition
+        .each(function() { ++n; })
+        .each("end", function() { if (!--n) callback.apply(this, arguments); });
+}
+
 // show and hide
 labels.attr("opacity", 0);
 groupLabels.attr("opacity", 1);
 
 // zoom and pan
 pzlib.setup("hgraph-container");
-pzlib.deltaS = 0.20;
-pzlib.zoomLimit = 3;
+pzlib.deltaS = 0.50;
+pzlib.zoomLimit = 2.50;
 
 pzlib.afterZoom = function () {
 
-    if(this.zoomLevel > 2){
+    if(pzlib.zoomLevel > 1){
         console.log("trigger!");
         if(isVisible(groupLabels)){
-            console.log("group labels visible");
-            groupLabels.attr("opacity", 0.25);
+            animateOpacity(groupLabels, 0.1);
         }
         if(!isVisible(labels)){
-            labels.attr("opacity", 1);
+            animateOpacity(labels, 1);
         }
     }
 
     else {
         if(!isVisible(groupLabels)){
-            groupLabels.attr("opacity", 1);
+            animateOpacity(groupLabels, 1);
         }
         if(isVisible(labels)){
-            labels.attr("opacity", 0);
+            animateOpacity(labels, 0);
         }
     }
 

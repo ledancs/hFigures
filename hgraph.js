@@ -38,9 +38,7 @@ var angleUnit = function (startAngle, padAngle, endAngle, n) {
     var end = endAngle - padAngle/2;
 
     var space = end - start;
-    var unit = space / (n + 1);
-
-    return unit;
+    return space / (n + 1);
 };
 
 var arcs = hgraph.selectAll("g.arc")
@@ -94,8 +92,7 @@ var groupLabelsText = groupLabels.append("text")
     })
     .attr("font-size", w * 0.0275)
     .each(function (d) {
-        var bbox = this.getBBox()
-        d.bbox = bbox;
+        d.bbox = this.getBBox();
     });
 
 var groupLabelsFrame = groupLabels.append("rect")
@@ -120,19 +117,22 @@ var groupLabelsFrame = groupLabels.append("rect")
         "stroke-width": 1.5
     })
     .each(function (d) {
-        var dx = Math.cos(d.labelAngle) > 0 ? 0: this.getBBox().width;
-        var dy = this.getBBox().height/2;
+        var box = this.getBBox();
+        var dx = Math.cos(d.labelAngle) > 0 ? 0: box.width;
+        var dy = box.height/2;
         d.line = [{
-            x: this.getBBox().x + dx,
-            y: this.getBBox().y + dy
+            x: box.x + dx,
+            y: box.y + dy
         }];
     });
 
 
 // move them out of the background circle
 groupLabels.attr("transform", function(d, i){
-    var w = this.getBBox().width * 1.065;
-    var h = this.getBBox().height * 1.065;
+    var box = this.getBBox();
+
+    var w = box.width * 1.065;
+    var h = box.height * 1.065;
 
     w *= Math.cos(d.labelAngle) > 0 ? 1: -1;
     h *= Math.sin(d.labelAngle) > 0 ? -1: 1;
@@ -164,7 +164,7 @@ groupLabels.append("path")
         "stroke-width": 2,
         "fill": "none"
     })
-    .attr("stroke-dasharray", function(d){
+    .attr("stroke-dasharray", function(){
         return 3 + " " + 3;
     })
     .each(function (d) {
@@ -182,7 +182,7 @@ groupLabelsText.each(function(){
 
 // polygon
 
-var polygon = hgraph.append("g").attr("class", "polygon").selectAll("polygon")
+hgraph.append("g").attr("class", "polygon").selectAll("polygon")
     .data(function () {
         var coords = [];
         for(var x in points){
@@ -278,19 +278,21 @@ var labelsFrame = labels.append("rect")
         "stroke-width": 0.75
     })
     .each(function (d) {
-        var dx = Math.cos(d.labelAngle) > 0 ? 0: this.getBBox().width;
-        var dy = this.getBBox().height/2;
+        var box = this.getBBox();
+        var dx = Math.cos(d.labelAngle) > 0 ? 0: box.width;
+        var dy = box.height/2;
         d.line = [{
-            x: this.getBBox().x + dx,
-            y: this.getBBox().y + dy
+            x: box.x + dx,
+            y: box.y + dy
         }];
     });
 
 
 // move them out of the background circle
 labels.attr("transform", function(d, i){
-    var w = this.getBBox().width * 1.065;
-    var h = this.getBBox().height * 1.065;
+    var box = this.getBBox();
+    var w = box.width * 1.065;
+    var h = box.height * 1.065;
 
     w *= Math.cos(d.labelAngle) > 0 ? 1: -1;
     h *= Math.sin(d.labelAngle) > 0 ? -1: 1;
@@ -385,9 +387,8 @@ function angle(startAngle, endAngle) {
     var centroidAngle = (startAngle + endAngle)/2;
     // Math.PI (rad) = 180 (deg)
     // centroidAngle (rad) = x (deg)
-    var a = (centroidAngle * 180) / Math.PI;
     // return a > 90 ? a - 180 : a;
-    return a;
+    return (centroidAngle * 180) / Math.PI;
 }
 
 function yRadius(angle, width){
@@ -420,9 +421,7 @@ function yRadius(angle, width){
 
 function isVisible(d3element){
     var opacity = parseInt(d3element.attr("opacity"));
-    if(opacity == 0)
-        return false;
-    return true;
+    return opacity != 0;
 }
 
 var done = 0;

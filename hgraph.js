@@ -33,13 +33,13 @@ var hgraph = hgraphWrapper.append("g").attr("class", "hgraph");
 
 var points = [];
 
-var angleUnit = function (startAngle, padAngle, endAngle, n) {
+function angleUnit(startAngle, padAngle, endAngle, n) {
     var start = startAngle + padAngle/2;
     var end = endAngle - padAngle/2;
 
     var space = end - start;
     return space / (n + 1);
-};
+}
 
 var arcs = hgraph.selectAll("g.arc")
     .data(pieObjects)
@@ -49,6 +49,7 @@ var arcs = hgraph.selectAll("g.arc")
 
 var pointsPerSection = [];
 var dataByAngles = [];
+var pointsBySection = [];
 
 arcs.append("path")
     .attr({
@@ -69,6 +70,7 @@ arcs.each(function (d, i) {
     });
 
     pointsPerSection = generatePoints(i, d.startAngle, d.padAngle, d.endAngle);
+    pointsBySection.push(pointsPerSection);
     points = points.concat(pointsPerSection);
 });
 
@@ -92,8 +94,10 @@ var groupLabelsText = groupLabels.append("text")
     })
     .attr("font-size", w * 0.0275)
     .each(function (d) {
-        d.bbox = this.getBBox();
+        d.bbox = getBox(this);
     });
+
+var pathData = [];
 
 var groupLabelsFrame = groupLabels.append("rect")
     .attr("x", function(d){
@@ -117,7 +121,7 @@ var groupLabelsFrame = groupLabels.append("rect")
         "stroke-width": 1.5
     })
     .each(function (d) {
-        var box = this.getBBox();
+        var box = getBox(this);
         var dx = Math.cos(d.labelAngle) > 0 ? 0: box.width;
         var dy = box.height/2;
         d.line = [{
@@ -128,18 +132,21 @@ var groupLabelsFrame = groupLabels.append("rect")
 
 
 // move them out of the background circle
-groupLabels.attr("transform", function(d, i){
-    var box = this.getBBox();
+groupLabels.attr("transform", function(d){
+    var box = getBox(this);
 
     var w = box.width * 1.065;
     var h = box.height * 1.065;
 
-    w *= Math.cos(d.labelAngle) > 0 ? 1: -1;
-    h *= Math.sin(d.labelAngle) > 0 ? -1: 1;
+    var cos = Math.cos(d.labelAngle);
+    var sin = Math.sin(d.labelAngle);
+
+    w *= cos > 0 ? 1: -1;
+    h *= sin > 0 ? -1: 1;
 
     d.line.push({
-        x: (Math.cos(d.labelAngle) * outerRadius) - (w/2),
-        y: (Math.sin(d.labelAngle) * outerRadius * -1) - (h/2)
+        x: (cos * outerRadius) - (w/2),
+        y: (sin * outerRadius * -1) - (h/2)
     });
 
     return "translate(" + (w/2) + ", " + (h/2) + ")";
@@ -166,9 +173,6 @@ groupLabels.append("path")
     })
     .attr("stroke-dasharray", function(){
         return 3 + " " + 3;
-    })
-    .each(function (d) {
-        d.direction = true;
     });
 
 // move the frame to the foreground
@@ -203,16 +207,40 @@ hgraph.append("g").attr("class", "polygon").selectAll("polygon")
     });
 
 var pointsGroup = hgraph.append("g").attr("class", "pointsGroup");
-
+/*
 var pointsSection = pointsGroup.selectAll("g.pointsSection")
-    .data(pieObjects)
+    .data(pointsBySection)
     .enter()
     .append("g")
     .attr("class", "pointsSection");
-
+*/
 // select the sample as well
+for(var i = 0; i < pointsBySection.length; i++){
+    var g = pointsGroup.append("g").attr("class", "pointsInSection");
+    g.selectAll("circle")
+        .data(pointsBySection[i])
+        .enter()
+        .append("circle")
+        .attr({
+            "fill": "white",
+            "stroke": "#5b5b5b",
+            "stroke-width": 1,
+            "r": 3
+        })
+        .attr("cx", function (d) {
+            return d.coords[0];
+        })
+        .attr("cy", function (d) {
+            return d.coords[1];
+        });
+}
+
+/*
 pointsSection.selectAll("circle")
-    .data(points)
+    .data(function (d, i) {
+
+        return pointsBySection[i];
+    })
     .enter()
     .append("circle")
     .attr({
@@ -227,7 +255,7 @@ pointsSection.selectAll("circle")
     .attr("cy", function (d) {
         return d.coords[1];
     });
-
+*/
 // labels for the circles
 
 var labels = hgraph.selectAll("g.labels")
@@ -252,8 +280,7 @@ var labelsText = labels.append("text")
     })
     .attr("font-size", w * 0.0125)
     .each(function (d) {
-        var bbox = this.getBBox()
-        d.bbox = bbox;
+        d.bbox = getBox(this);
     });
 
 var labelsFrame = labels.append("rect")
@@ -278,7 +305,7 @@ var labelsFrame = labels.append("rect")
         "stroke-width": 0.75
     })
     .each(function (d) {
-        var box = this.getBBox();
+        var box = getBox(this);
         var dx = Math.cos(d.labelAngle) > 0 ? 0: box.width;
         var dy = box.height/2;
         d.line = [{
@@ -289,8 +316,8 @@ var labelsFrame = labels.append("rect")
 
 
 // move them out of the background circle
-labels.attr("transform", function(d, i){
-    var box = this.getBBox();
+labels.attr("transform", function(d){
+    var box = getBox(this);
     var w = box.width * 1.065;
     var h = box.height * 1.065;
 
@@ -322,6 +349,7 @@ labels.append("line")
         "stroke-width": 1
     })
     .style("stroke-dasharray", ("1, 1"));
+
 labelsFrame.each(function(){
     this.parentNode.appendChild(this);
 });
@@ -329,6 +357,7 @@ labelsFrame.each(function(){
 labelsText.each(function(){
     this.parentNode.appendChild(this);
 });
+
 // move the hgraph
 var translate = "translate(" + (w/2) + ", " + (h/2) + ")";
 // flip the y axis
@@ -417,6 +446,10 @@ function yRadius(angle, width){
         }
     }
     return offset;
+}
+
+function getBox(svgElement){
+    return svgElement.getBBox();
 }
 
 function isVisible(d3element){

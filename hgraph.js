@@ -188,11 +188,10 @@ groupLabelsText.each(function(){
 
 hgraph.append("g").attr("class", "polygon").selectAll("polygon")
     .data(function () {
-        var coords = [];
-        for(var x in points){
-            coords.push(points[x].coords);
-        }
-        return [coords];
+        var coordinates = [];
+        for(var i = 0; i < points.length; i ++)
+            coordinates.push(points[i].coords);
+        return [coordinates];
     })
     .enter()
     .append("polygon")

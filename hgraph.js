@@ -333,19 +333,25 @@ function between(x, min, max) {
 // collisions
 var q; // selection of d3 elements
 var border = 0; // determines the border that the next element should not exceed
-
+var margin = 5; // margin space
 // First quadrant
 q = hgraph.selectAll("g.q1").sort(function(a, b){
     return a.labelAngle - b.labelAngle; // specific to this quadrant
 });
 q.each(function (d, i) {
+    var adjustment;
     if(i == 0){
         border = d.frameBox.y;
     }
     else{
-        if(d.frameBox.y + d.frameBox.height >= border){
+        if(d.frameBox.y + d.frameBox.height + margin >= border){
             console.log("collision detected with " + d.measurement.label);
             // add more space to the yOffset
+            adjustment = d.frameBox.y + d.frameBox.height + margin - border;
+            if(d.yOffset < 0)
+                d.yOffset = d.yOffset - adjustment;
+            else
+                d.yOffset = d.yOffset + adjustment;
         }
         border = d.frameBox.y;
     }

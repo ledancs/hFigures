@@ -341,7 +341,7 @@ q = hgraph.selectAll("g.q1").sort(function(a, b){
 // for this case
 // TODO: extract to a function
 q.each(function (d, i) {
-    var adjustment;
+    var adjustment = 0;
     if(i == 0){
         border = d.frameBox.y;
     }
@@ -355,7 +355,7 @@ q.each(function (d, i) {
             else
                 d.yOffset = d.yOffset + adjustment;
         }
-        border = d.frameBox.y;
+        border = d.frameBox.y + adjustment; // propagate the adjustment
     }
 })
 

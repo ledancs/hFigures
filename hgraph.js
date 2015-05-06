@@ -338,6 +338,8 @@ var margin = 5; // margin space
 q = hgraph.selectAll("g.q1").sort(function(a, b){
     return a.labelAngle - b.labelAngle; // specific to this quadrant
 });
+// for this case
+// TODO: extract to a function
 q.each(function (d, i) {
     var adjustment;
     if(i == 0){

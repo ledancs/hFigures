@@ -89,7 +89,7 @@ var groupLabelsText = groupLabels.append("text")
         return Math.cos(d.labelAngle) * labelRadius;
     })
     .attr("y", function(d){
-        return (Math.sin(d.labelAngle) * labelRadius * -1) + yRadius(d.labelAngle, w)/2;
+        return (Math.sin(d.labelAngle) * labelRadius * -1);
 
     })
     .attr("font-size", w * 0.0275)
@@ -263,6 +263,8 @@ var labels = hgraph.selectAll("g.labels")
     .append("g")
     .attr("class", "labels");
 
+
+
 var labelsText = labels.append("text")
     .text(function(d){
         return d.measurement.label + ": " + d.sample.value + " " + d.measurement.units;
@@ -275,7 +277,7 @@ var labelsText = labels.append("text")
         return Math.cos(d.labelAngle) * d.r;
     })
     .attr("y", function(d){
-        return (Math.sin(d.labelAngle) * d.r * -1) + yRadius(d.labelAngle, w);
+        return (Math.sin(d.labelAngle) * d.r * -1);
     })
     .attr("font-size", w * 0.0125)
     .each(function (d) {
@@ -304,44 +306,101 @@ var labelsFrame = labels.append("rect")
         "stroke-width": 0.75
     })
     .each(function (d) {
-        var box = getBox(this);
-        var dx = Math.cos(d.labelAngle) > 0 ? 0: box.width;
-        var dy = box.height/2;
-        d.line = [{
-            x: box.x + dx,
-            y: box.y + dy
-        }];
+        d.frameBox = getBox(this);
     });
 
 
 // move them out of the background circle
-labels.attr("transform", function(d){
-    var box = getBox(this);
-    var w = box.width * 1.065;
-    var h = box.height * 1.065;
-
-    w *= Math.cos(d.labelAngle) > 0 ? 1: -1;
-    h *= Math.sin(d.labelAngle) > 0 ? -1: 1;
-
-    d.line.push({
-        x: (Math.cos(d.labelAngle) * (d.radius + 5)) - (w/2),
-        y: (Math.sin(d.labelAngle) * (d.radius + 5) * -1) - (h/2)
-    });
-
-    return "translate(" + (w/2) + ", " + (h/2) + ")";
+labels.each(function (d) {
+    var boxW = Math.cos(d.labelAngle) > 0 ? d.frameBox.width: -d.frameBox.width;
+    d.xOffset = boxW / 2;
+    var boxH = Math.sin(d.labelAngle) > 0 ? -d.frameBox.height: d.frameBox.height;
+    d.yOffset = yRadius(d.labelAngle, w) + boxH/2;
+    d.yOffset = boxH/2;
 });
+
+labels.attr("class", function(d){
+    var angle = Math.PI / 2 - d.labelAngle;
+    return between(angle, 0, Math.PI/2) ?
+        "q1" : between(angle, Math.PI/2, Math.PI) ?
+        "q2" : between(angle, Math.PI, 3/2*Math.PI) ?
+        "q3" : "q4";
+});
+
+function between(x, min, max) {
+    return x >= min && x <= max;
+}
+// collisions
+var q; // selection of d3 elements
+var border = 0; // determines the border that the next element should not exceed
+
+// First quadrant
+q = hgraph.selectAll("g.q1").sort(function(a, b){
+    return a.labelAngle - b.labelAngle; // specific to this quadrant
+});
+q.each(function (d, i) {
+    if(i == 0){
+        border = d.frameBox.y;
+    }
+    else{
+        if(d.frameBox.y + d.frameBox.height >= border){
+            console.log("collision detected with " + d.measurement.label);
+            // add more space to the yOffset
+        }
+        border = d.frameBox.y;
+    }
+})
+
+// printAngles(q);
+
+q = hgraph.selectAll("g.q2").sort(function(a, b){
+    return a.labelAngle - b.labelAngle;
+});
+
+// printAngles(q);
+
+q = hgraph.selectAll("g.q3").sort(function(a, b){
+    return b.labelAngle - a.labelAngle;
+});
+
+// printAngles(q);
+
+q = hgraph.selectAll("g.q4").sort(function(a, b){
+    return a.labelAngle - b.labelAngle;
+});
+
+// printAngles(q);
+
+function printAngles(selection){
+    console.log("START");
+    selection.each(function (d) {
+        console.log(Math.PI / 2 - d.labelAngle);
+    });
+}
+
+// get all the labels
+// group by quadrants
+// sort by distance to 0, PI and 2PI
+// begin with shortest distance to PI
+// move up or down
+// adjust the next
+
+labels.attr("transform", function(d){
+    return "translate(" + d.xOffset + ", " + d.yOffset + ")";
+});
+
 labels.append("line")
     .attr("x1", function (d) {
-        return d.line[0].x;
+        return Math.cos(d.labelAngle) > 0 ? d.frameBox.x: d.frameBox.x + d.frameBox.width;
     })
     .attr("y1", function (d) {
-        return d.line[0].y;
+        return d.frameBox.y + d.frameBox.height/2;
     })
     .attr("x2", function (d) {
-        return d.line[1].x;
+        return Math.cos(d.labelAngle) * (d.radius + 3) - d.xOffset;
     })
     .attr("y2", function (d) {
-        return d.line[1].y;
+        return (Math.sin(d.labelAngle) * (d.radius + 3) * - 1) - d.yOffset;
     })
     .attr({
         "stroke": "grey",
@@ -357,18 +416,18 @@ labelsText.each(function(){
     this.parentNode.appendChild(this);
 });
 
-// move the hgraph
-var translate = "translate(" + (w/2) + ", " + (h/2) + ")";
 // flip the y axis
-var scale = "scale(1, -1)";
+// var scale = "scale(1, -1)";
 // rotate
-var rotate = "rotate(90)";
+// var rotate = "rotate(90)";
 // all the transformations
-var transformations = [scale, rotate];
+// var transformations = [scale, rotate];
 // apply
-arcs.attr("transform", transformations.join(" "));
+// arcs.attr("transform", transformations.join(" "));
 //pointsGroup.attr("transform", scale + " " + rotate);
 //polygon.attr("transform", scale + " " + rotate);
+// move the hgraph
+var translate = "translate(" + (w/2) + ", " + (h/2) + ")";
 hgraph.attr("transform", translate);
 
 // console.log(points.join(" "));
@@ -387,6 +446,8 @@ function generatePoints(i, startAngle, padAngle, endAngle) {
         s = m.samples[1];
         v = s.value;
         angle = startAngle + padAngle + ((j + 1) * delta);
+        // move the result so it goes clockwise
+        angle = Math.PI / 2 - angle;
         scale = d3.scale.linear()
             .domain([m.min, m.max])
             .range([innerRadius, outerRadius]);
@@ -408,7 +469,9 @@ function getAngleAtSlice(startAngle, endAngle, padAngle, slice){
     var start = startAngle + padAngle/2;
     var end = endAngle - padAngle/2;
     var space = end - start;
-    return startAngle + padAngle + (space / slice);
+    var result = startAngle + (space / slice);
+    // move the result so it goes clockwise
+    return Math.PI / 2 - result;
 }
 
 function angle(startAngle, endAngle) {
@@ -424,12 +487,13 @@ function yRadius(angle, width){
 
     var steps = [
         {fraction: 4,  value: 0.0050},
-        {fraction: 6,  value: 0.0075},
-        {fraction: 8,  value: 0.0100},
-        {fraction: 10, value: 0.0075},
-        {fraction: 16, value: 0.0050},
-        {fraction: 24, value: 0.0050},
-        {fraction: 32, value: 0.0075}
+        {fraction: 6,  value: 0.0100},
+        {fraction: 8,  value: 0.0150},
+        {fraction: 10, value: 0.0200},
+        {fraction: 16, value: 0.0250},
+        {fraction: 24, value: 0.0300},
+        {fraction: 32, value: 0.0350},
+        {fraction: 64, value: 0.0400}
     ];
 
     var rangeA, rangeB, adjustedAngle;
@@ -441,6 +505,7 @@ function yRadius(angle, width){
         adjustedAngle = Math.abs(angle % Math.PI);
 
         if(adjustedAngle > rangeA && adjustedAngle < rangeB){
+            //console.log(" " + steps[i].fraction);
             offset -= Math.sin(angle) * width * steps[i].value;
         }
     }

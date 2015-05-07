@@ -370,44 +370,30 @@ function between(x, min, max) {
 var border = 0; // determines the border that the next element should not exceed
 var margin = 7; // margin space
 var lf = new LabelFixer(margin, border);
+var quadrants = [];
 
 // First quadrant
-var q1 = hgraph.selectAll("g.q1").sort(function(a, b){
+quadrants.push(hgraph.selectAll("g.q1").sort(function(a, b){
     return a.labelAngle - b.labelAngle; // specific to this quadrant sort by ascending
-});
-q1.each(function (d, i) {
-    d.yOffset = lf.adjustLabel(i, d.labelAngle, d.frameBox.y, d.frameBox.height, d.yOffset);
-});
+}));
 // Second quadrant
-var q2 = hgraph.selectAll("g.q2").sort(function(a, b){
+quadrants.push(hgraph.selectAll("g.q2").sort(function(a, b){
     return b.labelAngle - a.labelAngle; // descending order
-});
-lf.resetBorder(); // reset the border
-q2.each(function (d, i) {
-    d.yOffset = lf.adjustLabel(i, d.labelAngle, d.frameBox.y, d.frameBox.height, d.yOffset);
-});
+}));
 // Third quadrant
-var q3 = hgraph.selectAll("g.q3").sort(function(a, b){
+quadrants.push(hgraph.selectAll("g.q3").sort(function(a, b){
     return a.labelAngle - b.labelAngle; // ascending order
-});
-lf.resetBorder(); // reset the border
-q3.each(function (d, i) {
-    d.yOffset = lf.adjustLabel(i, d.labelAngle, d.frameBox.y, d.frameBox.height, d.yOffset);
-});
+}));
 // Fourth quadrant
-var q4 = hgraph.selectAll("g.q4").sort(function(a, b){
+quadrants.push(hgraph.selectAll("g.q4").sort(function(a, b){
     return b.labelAngle - a.labelAngle; // ascending order
-});
-lf.resetBorder(); // reset the border
-q4.each(function (d, i) {
-    d.yOffset = lf.adjustLabel(i, d.labelAngle, d.frameBox.y, d.frameBox.height, d.yOffset);
-});
-
-function printAngles(selection){
-    console.log("START");
-    selection.each(function (d) {
-        console.log(Math.PI / 2 - d.labelAngle);
+}));
+// loop through the quadrants
+for(var i = 0; i < quadrants.length; i++){
+    quadrants[i].each(function (d, i) {
+        d.yOffset = lf.adjustLabel(i, d.labelAngle, d.frameBox.y, d.frameBox.height, d.yOffset);
     });
+    lf.resetBorder(); // reset the border
 }
 
 // get all the labels

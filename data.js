@@ -1,5 +1,42 @@
 var groups = [
     {
+        label: "Blood Pressure III",
+        measurements:[
+            {
+                min: 90,
+                max: 120,
+                units: "mmHg",
+                label: "Systolic",
+                samples: [
+                    {
+                        timestamp: 1420798224,
+                        value: 132
+                    },
+                    {
+                        timestamp: 1423742720,
+                        value: 133
+                    }
+                ]
+            },
+            {
+                min: 60,
+                max: 80,
+                units: "mmHg",
+                label: "Diastolic",
+                samples: [
+                    {
+                        timestamp: 1420798224,
+                        value: 91
+                    },
+                    {
+                        timestamp: 1423742720,
+                        value: 92
+                    }
+                ]
+            }
+        ]
+    },
+    {
         label: "Blood Pressure II",
         measurements:[
             {

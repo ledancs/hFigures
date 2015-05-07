@@ -2,6 +2,37 @@
  * Created by andres on 4/23/15.
  */
 
+function LabelFixer(margin, border){
+    this.margin = margin;
+    this.border = border;
+}
+
+LabelFixer.prototype.adjustLabel = function (i, angle, y, height, yOffset){
+    var delta = 0,
+        upper = Math.sin(angle) >= 0;
+
+    var collision = upper ?
+        y + height + this.margin >= this.border :
+        y <= this.border;
+
+    if(collision && i > 0)
+        delta = upper ?
+            this.border - y - height - this.margin : // negative to move it up
+            this.border - y; // positive to move it down
+
+    yOffset += delta;
+
+    this.border = upper ?
+        y + delta :
+        y + height + this.margin + delta; // add the height and the margin plus possible delta
+
+    return yOffset;
+};
+
+LabelFixer.prototype.resetBorder = function () {
+    this.border = 0;
+};
+
 var dataset = groups; // how many measurements per group
 
 var pie = d3.layout.pie().value(function (d) {
@@ -320,64 +351,57 @@ labels.each(function (d) {
 });
 
 labels.attr("class", function(d){
+    // since we shift the angles as a clock
+    // 12 o'clock we begin
+    // from there it is clockwise
+    // so 1st quadrant begins from 12 o'clock
+    // then quadrant 4rd, 3rd and we end in the 2nd.
     var angle = Math.PI / 2 - d.labelAngle;
-    return between(angle, 0, Math.PI/2) ?
-        "q1" : between(angle, Math.PI/2, Math.PI) ?
-        "q2" : between(angle, Math.PI, 3/2*Math.PI) ?
-        "q3" : "q4";
+    return between(angle, 0, Math.PI/2) ? "q1" :
+        between(angle, Math.PI/2, Math.PI) ? "q4" :
+        between(angle, Math.PI, 3/2*Math.PI) ? "q3" : "q2";
 });
 
 function between(x, min, max) {
     return x >= min && x <= max;
 }
+
 // collisions
-var q; // selection of d3 elements
 var border = 0; // determines the border that the next element should not exceed
-var margin = 5; // margin space
+var margin = 7; // margin space
+var lf = new LabelFixer(margin, border);
+
 // First quadrant
-q = hgraph.selectAll("g.q1").sort(function(a, b){
-    return a.labelAngle - b.labelAngle; // specific to this quadrant
+var q1 = hgraph.selectAll("g.q1").sort(function(a, b){
+    return a.labelAngle - b.labelAngle; // specific to this quadrant sort by ascending
 });
-// for this case
-// TODO: extract to a function
-q.each(function (d, i) {
-    var adjustment = 0;
-    if(i == 0){
-        border = d.frameBox.y;
-    }
-    else{
-        if(d.frameBox.y + d.frameBox.height + margin >= border){
-            console.log("collision detected with " + d.measurement.label);
-            // add more space to the yOffset
-            adjustment = d.frameBox.y + d.frameBox.height + margin - border;
-            if(d.yOffset < 0)
-                d.yOffset = d.yOffset - adjustment;
-            else
-                d.yOffset = d.yOffset + adjustment;
-        }
-        border = d.frameBox.y + adjustment; // propagate the adjustment
-    }
-})
-
-// printAngles(q);
-
-q = hgraph.selectAll("g.q2").sort(function(a, b){
-    return a.labelAngle - b.labelAngle;
+q1.each(function (d, i) {
+    d.yOffset = lf.adjustLabel(i, d.labelAngle, d.frameBox.y, d.frameBox.height, d.yOffset);
 });
-
-// printAngles(q);
-
-q = hgraph.selectAll("g.q3").sort(function(a, b){
-    return b.labelAngle - a.labelAngle;
+// Second quadrant
+var q2 = hgraph.selectAll("g.q2").sort(function(a, b){
+    return b.labelAngle - a.labelAngle; // descending order
 });
-
-// printAngles(q);
-
-q = hgraph.selectAll("g.q4").sort(function(a, b){
-    return a.labelAngle - b.labelAngle;
+lf.resetBorder(); // reset the border
+q2.each(function (d, i) {
+    d.yOffset = lf.adjustLabel(i, d.labelAngle, d.frameBox.y, d.frameBox.height, d.yOffset);
 });
-
-// printAngles(q);
+// Third quadrant
+var q3 = hgraph.selectAll("g.q3").sort(function(a, b){
+    return a.labelAngle - b.labelAngle; // ascending order
+});
+lf.resetBorder(); // reset the border
+q3.each(function (d, i) {
+    d.yOffset = lf.adjustLabel(i, d.labelAngle, d.frameBox.y, d.frameBox.height, d.yOffset);
+});
+// Fourth quadrant
+var q4 = hgraph.selectAll("g.q4").sort(function(a, b){
+    return b.labelAngle - a.labelAngle; // ascending order
+});
+lf.resetBorder(); // reset the border
+q4.each(function (d, i) {
+    d.yOffset = lf.adjustLabel(i, d.labelAngle, d.frameBox.y, d.frameBox.height, d.yOffset);
+});
 
 function printAngles(selection){
     console.log("START");

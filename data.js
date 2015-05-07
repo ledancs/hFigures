@@ -434,6 +434,75 @@ var groups = [
         ]
     },
     {
+        label: "Lab Tests III",
+        measurements:[
+            {
+                min: 0,
+                max: 1.3,
+                units: "mmol/L",
+                label: "HDL (bad cholesterol)",
+                samples: [
+                    {
+                        timestamp: 1420798224,
+                        value: 1.35
+                    },
+                    {
+                        timestamp: 1423742720,
+                        value: 1.32
+                    }
+                ]
+            },
+            {
+                min: 5,
+                max: 8,
+                units: "mmol/L",
+                label: "LDL (good cholesterol)",
+                samples: [
+                    {
+                        timestamp: 1420798224,
+                        value: 7.5
+                    },
+                    {
+                        timestamp: 1423742720,
+                        value: 6.5
+                    }
+                ]
+            },
+            {
+                min: 0,
+                max: 2,
+                units: "mmol/L",
+                label: "Triglycerides",
+                samples: [
+                    {
+                        timestamp: 1420798224,
+                        value: 1.55
+                    },
+                    {
+                        timestamp: 1423742720,
+                        value: 1.62
+                    }
+                ]
+            },
+            {
+                min: 2,
+                max: 5,
+                units: "mmol/L",
+                label: "Cholesterol (total)",
+                samples: [
+                    {
+                        timestamp: 1420798224,
+                        value: 3.5
+                    },
+                    {
+                        timestamp: 1423742720,
+                        value: 3.84
+                    }
+                ]
+            }
+        ]
+    },
+    {
         label: "Sleep",
         measurements:[
             {

@@ -346,8 +346,7 @@ labels.each(function (d) {
     var boxW = Math.cos(d.labelAngle) > 0 ? d.frameBox.width: -d.frameBox.width;
     d.xOffset = boxW / 2;
     var boxH = Math.sin(d.labelAngle) > 0 ? -d.frameBox.height: d.frameBox.height;
-    d.yOffset = yRadius(d.labelAngle, w) + boxH/2;
-    d.yOffset = boxH/2;
+    d.yOffset = boxH / 2;
 });
 
 labels.attr("class", function(d){
@@ -498,36 +497,6 @@ function angle(startAngle, endAngle) {
     // centroidAngle (rad) = x (deg)
     // return a > 90 ? a - 180 : a;
     return (centroidAngle * 180) / Math.PI;
-}
-
-function yRadius(angle, width){
-    var offset = 0;
-
-    var steps = [
-        {fraction: 4,  value: 0.0050},
-        {fraction: 6,  value: 0.0100},
-        {fraction: 8,  value: 0.0150},
-        {fraction: 10, value: 0.0200},
-        {fraction: 16, value: 0.0250},
-        {fraction: 24, value: 0.0300},
-        {fraction: 32, value: 0.0350},
-        {fraction: 64, value: 0.0400}
-    ];
-
-    var rangeA, rangeB, adjustedAngle;
-
-    for(var i = 0; i < steps.length; i++){
-
-        rangeA = Math.PI/2 - Math.PI/steps[i].fraction;
-        rangeB = Math.PI/2 + Math.PI/steps[i].fraction;
-        adjustedAngle = Math.abs(angle % Math.PI);
-
-        if(adjustedAngle > rangeA && adjustedAngle < rangeB){
-            //console.log(" " + steps[i].fraction);
-            offset -= Math.sin(angle) * width * steps[i].value;
-        }
-    }
-    return offset;
 }
 
 function getBox(svgElement){

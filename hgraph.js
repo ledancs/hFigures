@@ -503,27 +503,30 @@ function getBox(svgElement){
     return svgElement.getBBox();
 }
 
-function isVisible(d3element){
-    var opacity = parseInt(d3element.attr("opacity"));
-    return opacity != 0;
+function GroupedAnimation(n, callfirst, callback){
+    this.n = n;
+    this.elementsDone = 0;
+    this.callfirst = callfirst;
+    this.callback = callback;
 }
 
-var done = 0;
-
-function animateOpacity(d3element, val){
-    pzlib.allowZoom = false;
+GroupedAnimation.prototype.animateOpacity = function (d3element, val) {
+    this.callfirst();
+    var self = this;
     d3element
         .transition()
         .attr("opacity", val)
         .duration(1300)
-        .call(endAll, function() {
-            done++;
-            if(done === 2){
-                done = 0;
-                pzlib.allowZoom = true;
-            }
-        });
-}
+        .call(endAll, function(){ self.check.apply(self); });
+};
+
+GroupedAnimation.prototype.check = function () {
+    this.elementsDone++;
+    if(this.elementsDone === this.n){
+        this.elementsDone = 0;
+        this.callback();
+    }
+};
 
 function endAll(transition, callback) {
     if (transition.size() === 0) { callback() }
@@ -532,38 +535,55 @@ function endAll(transition, callback) {
         .each(function() { ++n; })
         .each("end", function() { if (!--n) callback.apply(this, arguments); });
 }
-
 // show and hide
 labels.attr("opacity", 0);
 groupLabels.attr("opacity", 1);
-
+// setup the group animations
+var zoomCallfirst = function () {
+    pzlib.allowZoom = false; // disable zoom
+};
+var zoomCallback = function () {
+    pzlib.allowZoom = true; // enable zoom
+};
+// two groups, and function to call first and after the groups have finished the animation
+var ga = new GroupedAnimation(2, zoomCallfirst, zoomCallback);
 // zoom and pan
 pzlib.setup("hgraph-container");
 pzlib.deltaS = 0.50;
 pzlib.zoomLimit = 2.50;
 
 pzlib.afterZoom = function () {
-
-    if(pzlib.zoomLevel > 1){
-        console.log("trigger!");
-        if(isVisible(groupLabels)){
-            animateOpacity(groupLabels, 0.1);
-        }
-        if(!isVisible(labels)){
-            animateOpacity(labels, 1);
-        }
-    }
-
-    else {
-        if(!isVisible(groupLabels)){
-            animateOpacity(groupLabels, 1);
-        }
-        if(isVisible(labels)){
-            animateOpacity(labels, 0);
-        }
-    }
-
-    console.log("zoom level " + this.zoomLevel)
+    pzlib.zoomLevel > 1 ? zoomInAction(): zoomOutAction();
 };
+
+function zoomInAction(){
+    show(labels);
+    dim(groupLabels);
+}
+
+function zoomOutAction(){
+    show(groupLabels);
+    hide(labels);
+}
+
+function isVisible(d3element){
+    var opacity = parseInt(d3element.attr("opacity"));
+    return opacity != 0;
+}
+
+function show(d3element){
+    if(!isVisible(d3element))
+        ga.animateOpacity(d3element, 1);
+}
+
+function dim(d3element){
+    if(isVisible(d3element))
+        ga.animateOpacity(d3element, 0.3);
+}
+
+function hide(d3element){
+    if(isVisible(d3element))
+        ga.animateOpacity(d3element, 0);
+}
 
 // testing git

@@ -388,8 +388,8 @@ quadrants.push(hgraph.selectAll("g.q4").sort(function(a, b){
     return b.labelAngle - a.labelAngle; // ascending order
 }));
 // loop through the quadrants
-for(var i = 0; i < quadrants.length; i++){
-    quadrants[i].each(function (d, i) {
+for(var e = 0; e < quadrants.length; e++){
+    quadrants[e].each(function (d, i) {
         d.yOffset = lf.adjustLabel(i, d.labelAngle, d.frameBox.y, d.frameBox.height, d.yOffset);
     });
     lf.resetBorder(); // reset the border

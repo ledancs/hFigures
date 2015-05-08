@@ -503,15 +503,22 @@ function getBox(svgElement){
     return svgElement.getBBox();
 }
 
-function GroupedAnimation(n, callfirst, callback){
+/**
+ *
+ * @param {number} n - Number of groups to be animated
+ * @param {function} entryCall - Function to call when the animation starts
+ * @param {function} callback - Function to call when the animation ends
+ * @constructor
+ */
+function GroupedAnimation(n, entryCall, callback){
     this.n = n;
     this.elementsDone = 0;
-    this.callfirst = callfirst;
+    this.entryCall = entryCall;
     this.callback = callback;
 }
 
 GroupedAnimation.prototype.animateOpacity = function (d3element, val) {
-    this.callfirst();
+    this.entryCall();
     var self = this;
     d3element
         .transition()
@@ -528,6 +535,26 @@ GroupedAnimation.prototype.check = function () {
     }
 };
 
+GroupedAnimation.prototype.isVisible = function(d3element){
+    var opacity = parseInt(d3element.attr("opacity"));
+    return opacity != 0;
+};
+
+GroupedAnimation.prototype.show = function(d3element){
+    if(!this.isVisible(d3element))
+        ga.animateOpacity(d3element, 1);
+};
+
+GroupedAnimation.prototype.dim = function(d3element){
+    if(this.isVisible(d3element))
+        ga.animateOpacity(d3element, 0.3);
+};
+
+GroupedAnimation.prototype.hide = function(d3element){
+    if(this.isVisible(d3element))
+        ga.animateOpacity(d3element, 0);
+};
+
 function endAll(transition, callback) {
     if (transition.size() === 0) { callback() }
     var n = 0;
@@ -539,14 +566,14 @@ function endAll(transition, callback) {
 labels.attr("opacity", 0);
 groupLabels.attr("opacity", 1);
 // setup the group animations
-var zoomCallfirst = function () {
+var zoomEntryCall = function () {
     pzlib.allowZoom = false; // disable zoom
 };
 var zoomCallback = function () {
     pzlib.allowZoom = true; // enable zoom
 };
 // two groups, and function to call first and after the groups have finished the animation
-var ga = new GroupedAnimation(2, zoomCallfirst, zoomCallback);
+var ga = new GroupedAnimation(2, zoomEntryCall, zoomCallback);
 // zoom and pan
 pzlib.setup("hgraph-container");
 pzlib.deltaS = 0.50;
@@ -557,33 +584,13 @@ pzlib.afterZoom = function () {
 };
 
 function zoomInAction(){
-    show(labels);
-    dim(groupLabels);
+    ga.show(labels);
+    ga.dim(groupLabels);
 }
 
 function zoomOutAction(){
-    show(groupLabels);
-    hide(labels);
-}
-
-function isVisible(d3element){
-    var opacity = parseInt(d3element.attr("opacity"));
-    return opacity != 0;
-}
-
-function show(d3element){
-    if(!isVisible(d3element))
-        ga.animateOpacity(d3element, 1);
-}
-
-function dim(d3element){
-    if(isVisible(d3element))
-        ga.animateOpacity(d3element, 0.3);
-}
-
-function hide(d3element){
-    if(isVisible(d3element))
-        ga.animateOpacity(d3element, 0);
+    ga.show(groupLabels);
+    ga.hide(labels);
 }
 
 // testing git

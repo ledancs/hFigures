@@ -130,27 +130,7 @@ var groupLabelsText = groupLabels.append("text")
 
 var pathData = [];
 
-var groupLabelsFrame = groupLabels.append("rect")
-    .attr("x", function(d){
-        return d.bbox.x - 5;
-    })
-    .attr("y", function (d) {
-        return d.bbox.y;
-    })
-    .attr("height", function (d) {
-        return d.bbox.height;
-    })
-    .attr("width", function (d) {
-        return d.bbox.width + 10;
-    })
-    .attr({
-        "rx": 5,
-        "ry": 5,
-        "stroke": "grey",
-        // "fill": "#d5f5d5",
-        "fill": "none",
-        "stroke-width": 1.5
-    })
+var groupLabelsFrame = addFrameBox(groupLabels)
     .each(function (d) {
         var box = getBox(this);
         var dx = Math.cos(d.labelAngle) > 0 ? 0: box.width;
@@ -315,31 +295,34 @@ var labelsText = labels.append("text")
         d.bbox = getBox(this);
     });
 
-var labelsFrame = labels.append("rect")
-    .attr("x", function(d){
-        return d.bbox.x - 5;
-    })
-    .attr("y", function (d) {
-        return d.bbox.y;
-    })
-    .attr("height", function (d) {
-        return d.bbox.height;
-    })
-    .attr("width", function (d) {
-        return d.bbox.width + 10;
-    })
-    .attr({
-        "rx": 3,
-        "ry": 3,
-        "stroke": "grey",
-        // "fill": "#d5f5d5",
-        "fill": "white",
-        "stroke-width": 0.75
-    })
+var labelsFrame = addFrameBox(labels)
     .each(function (d) {
         d.frameBox = getBox(this);
     });
 
+function addFrameBox(labels){
+    return labels.append("rect")
+        .attr("x", function(d){
+            return d.bbox.x - 5;
+        })
+        .attr("y", function (d) {
+            return d.bbox.y;
+        })
+        .attr("height", function (d) {
+            return d.bbox.height;
+        })
+        .attr("width", function (d) {
+            return d.bbox.width + 10;
+        })
+        .attr({
+            "rx": 3,
+            "ry": 3,
+            "stroke": "grey",
+            // "fill": "#d5f5d5",
+            "fill": "white",
+            "stroke-width": 0.75
+        });
+}
 
 // move them out of the background circle
 labels.each(function (d) {
@@ -585,7 +568,7 @@ pzlib.afterZoom = function () {
 
 function zoomInAction(){
     ga.show(labels);
-    ga.dim(groupLabels);
+    ga.hide(groupLabels);
 }
 
 function zoomOutAction(){

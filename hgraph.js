@@ -164,7 +164,7 @@ function addLabelText(groups, funcText, funcAngle, fontSize){
         });
 }
 
-function getLabelLines(labels){
+function addLabelLines(labels){
     return labels.append("line")
         .attr("x1", function (d) {
             return Math.cos(d.labelAngle) > 0 ? d.frameBox.x: d.frameBox.x + d.frameBox.width;
@@ -186,14 +186,12 @@ function getLabelLines(labels){
 }
 
 var groupLabelsG = hgraph.append("g").attr("class", "groupLabels");
-
 var groupLabels = groupLabelsG.selectAll("g.groupLabel")
     .data(dataByAngles)
     .enter()
     .append("g")
     .attr("class", "groupLabel");
-
-var groupLabelsText = addLabelText(groupLabels, function (d) {
+buildLabels(groupLabels, function (d) {
     return d.groupValues.label;
 }, function (d) {
     d.labelRadius = labelRadius;
@@ -202,33 +200,95 @@ var groupLabelsText = addLabelText(groupLabels, function (d) {
     d.radius = outerRadius;
 }, w * 0.0275);
 
-var groupLabelsFrame = addFrameBox(groupLabels);
+var labelsG = hgraph.append("g").attr("class", "labels");
+var labels = labelsG.selectAll("g.label")
+    .data(points)
+    .enter()
+    .append("g")
+    .attr("class", "label");
 
-groupLabelsFrame.each(function (d) {
-    d.frameBox = getBox(this);
-    var center = labelCentroid(d.frameBox, d.labelAngle);
-    d.radius = outerRadius;
-    d.yOffset = center.y;
-    d.xOffset = center.x;
-});
+buildLabels(labels, function (d) {
+        return d.measurement.label + ": " + d.sample.value + " " + d.measurement.units;
+    }, function (d) {
+        d.labelRadius = Math.max(d.radius + 10, outerRadius + 10);
+    }, w * 0.0125);
 
-groupLabels.attr("transform", function(d){
-    return "translate(" + (d.xOffset) + ", " + (d.yOffset) + ")";
-});
+function buildLabels(labels, funcText, funcAngle, fontSize){
+    var labelsText = addLabelText(labels, funcText, funcAngle, fontSize);
+    var labelsFrame = addFrameBox(labels);
+    // move them out of the background circle
+    labelsFrame.each(function (d) {
+        d.frameBox = getBox(this);
+        var center = labelCentroid(d.frameBox, d.labelAngle);
+        d.xOffset = center.x;
+        d.yOffset = center.y;
+    });
+    collisionFix(labels);
+    labels.attr("transform", function(d){
+        return "translate(" + d.xOffset + ", " + d.yOffset + ")";
+    });
+    addLabelLines(labels);
+    labelsFrame.each(function(){
+        this.parentNode.appendChild(this);
+    });
+    // move the labels on top of the rectangles
+    labelsText.each(function(){
+        this.parentNode.appendChild(this);
+    });
 
-getLabelLines(groupLabels);
+}
+function between(x, min, max) {
+    return x >= min && x <= max;
+}
 
-// move the frame to the foreground
-groupLabelsFrame.each(function(){
-    this.parentNode.appendChild(this);
-});
-// move the labels on top of the rectangles
-groupLabelsText.each(function(){
-    this.parentNode.appendChild(this);
-});
+function ascending(a, b){
+    return a.labelAngle - b.labelAngle;
+}
+function descending(a, b){
+    return b.labelAngle - a.labelAngle;
+}
+
+function collisionFix(labels){
+    var angle = 0,
+        className = "";
+    labels.attr("class", function(d){
+        // since we shift the angles as a clock
+        // 12 o'clock we begin
+        // from there it is clockwise
+        // so 1st quadrant begins from 12 o'clock
+        // then quadrant 4rd, 3rd and we end in the 2nd.
+        className = d3.select(this).attr("class");
+        angle = Math.PI / 2 - d.labelAngle;
+        return between(angle, 0, Math.PI/2) ? "q1" :
+            between(angle, Math.PI/2, Math.PI) ? "q4" :
+                between(angle, Math.PI, 3/2*Math.PI) ? "q3" : "q2";
+    });
+
+    // collisions
+    var lf = new LabelFixer(7, 0);
+    var quadrants = [];
+
+    // First quadrant
+    // sort by ascending
+    quadrants.push(hgraph.selectAll("g.q1").sort(ascending));
+    // Third quadrant
+    quadrants.push(hgraph.selectAll("g.q3").sort(ascending));
+    // Second quadrant
+    // descending order
+    quadrants.push(hgraph.selectAll("g.q2").sort(descending));
+    // Fourth quadrant
+    quadrants.push(hgraph.selectAll("g.q4").sort(descending));
+    // loop through the quadrants
+    for(var e = 0; e < quadrants.length; e++){
+        quadrants[e].each(function (d, i) {
+            d.yOffset = lf.adjustLabel(i, d.labelAngle, d.frameBox.y, d.frameBox.height, d.yOffset);
+        });
+        lf.resetBorder(); // reset the border
+    }
+    labels.attr("class", className);
+}
 
 // polygon
-
 hgraph.append("g").attr("class", "polygon").selectAll("polygon")
     .data(function () {
         var coordinates = [];
@@ -250,12 +310,12 @@ hgraph.append("g").attr("class", "polygon").selectAll("polygon")
 
 var pointsGroup = hgraph.append("g").attr("class", "pointsGroup");
 /*
-var pointsSection = pointsGroup.selectAll("g.pointsSection")
-    .data(pointsBySection)
-    .enter()
-    .append("g")
-    .attr("class", "pointsSection");
-*/
+ var pointsSection = pointsGroup.selectAll("g.pointsSection")
+ .data(pointsBySection)
+ .enter()
+ .append("g")
+ .attr("class", "pointsSection");
+ */
 // select the sample as well
 for(var i = 0; i < pointsBySection.length; i++){
     var g = pointsGroup.append("g").attr("class", "pointsInSection");
@@ -276,113 +336,6 @@ for(var i = 0; i < pointsBySection.length; i++){
             return d.coords[1];
         });
 }
-
-var labelsG = hgraph.append("g").attr("class", "labels");
-var labels = labelsG.selectAll("g.label")
-    .data(points)
-    .enter()
-    .append("g")
-    .attr("class", "label");
-/*
-var labelsText = labels.append("text")
-    .text(function(d){
-        return d.measurement.label + ": " + d.sample.value + " " + d.measurement.units;
-    })
-    .attr("text-anchor", "middle")
-    .attr("x", function(d){
-        return Math.cos(d.labelAngle) * getMaxRadius(d.radius, outerRadius);
-    })
-    .attr("y", function(d){
-        return (Math.sin(d.labelAngle) * getMaxRadius(d.radius, outerRadius) * -1);
-    })
-    .attr("font-size", w * 0.0125)
-    .each(function (d) {
-        d.bbox = getBox(this);
-    });
-*/
-var labelsText = addLabelText(labels, function (d) {
-    return d.measurement.label + ": " + d.sample.value + " " + d.measurement.units;
-}, function (d) {
-    d.labelRadius = Math.max(d.radius + 10, outerRadius + 10);
-}, w * 0.0125);
-
-var labelsFrame = addFrameBox(labels);
-
-// move them out of the background circle
-labelsFrame.each(function (d) {
-    d.frameBox = getBox(this);
-    var center = labelCentroid(d.frameBox, d.labelAngle);
-    d.xOffset = center.x;
-    d.yOffset = center.y;
-});
-
-labels.attr("class", function(d){
-    // since we shift the angles as a clock
-    // 12 o'clock we begin
-    // from there it is clockwise
-    // so 1st quadrant begins from 12 o'clock
-    // then quadrant 4rd, 3rd and we end in the 2nd.
-    var angle = Math.PI / 2 - d.labelAngle;
-    return between(angle, 0, Math.PI/2) ? "q1" :
-        between(angle, Math.PI/2, Math.PI) ? "q4" :
-        between(angle, Math.PI, 3/2*Math.PI) ? "q3" : "q2";
-});
-
-function between(x, min, max) {
-    return x >= min && x <= max;
-}
-
-// collisions
-var border = 0; // determines the border that the next element should not exceed
-var margin = 7; // margin space
-var lf = new LabelFixer(margin, border);
-var quadrants = [];
-
-function ascending(a, b){
-    return a.labelAngle - b.labelAngle;
-}
-
-function descending(a, b){
-    return b.labelAngle - a.labelAngle;
-}
-// First quadrant
-// sort by ascending
-quadrants.push(hgraph.selectAll("g.q1").sort(ascending));
-// Third quadrant
-quadrants.push(hgraph.selectAll("g.q3").sort(ascending));
-// Second quadrant
-// descending order
-quadrants.push(hgraph.selectAll("g.q2").sort(descending));
-// Fourth quadrant
-quadrants.push(hgraph.selectAll("g.q4").sort(descending));
-// loop through the quadrants
-for(var e = 0; e < quadrants.length; e++){
-    quadrants[e].each(function (d, i) {
-        d.yOffset = lf.adjustLabel(i, d.labelAngle, d.frameBox.y, d.frameBox.height, d.yOffset);
-    });
-    lf.resetBorder(); // reset the border
-}
-
-// get all the labels
-// group by quadrants
-// sort by distance to 0, PI and 2PI
-// begin with shortest distance to PI
-// move up or down
-// adjust the next
-
-labels.attr("transform", function(d){
-    return "translate(" + d.xOffset + ", " + d.yOffset + ")";
-});
-
-getLabelLines(labels);
-
-labelsFrame.each(function(){
-    this.parentNode.appendChild(this);
-});
-// move the labels on top of the rectangles
-labelsText.each(function(){
-    this.parentNode.appendChild(this);
-});
 
 // flip the y axis
 // var scale = "scale(1, -1)";
@@ -498,7 +451,7 @@ GroupedAnimation.prototype.show = function(d3element){
 
 GroupedAnimation.prototype.dim = function(d3element){
     if(this.isVisible(d3element))
-        ga.animateOpacity(d3element, 0.3);
+        ga.animateOpacity(d3element, 0.2);
 };
 
 GroupedAnimation.prototype.hide = function(d3element){
@@ -536,7 +489,7 @@ pzlib.afterZoom = function () {
 
 function zoomInAction(){
     ga.show(labels);
-    ga.hide(groupLabels);
+    ga.dim(groupLabels);
 }
 
 function zoomOutAction(){

@@ -354,22 +354,23 @@ var margin = 7; // margin space
 var lf = new LabelFixer(margin, border);
 var quadrants = [];
 
+function ascending(a, b){
+    return a.labelAngle - b.labelAngle;
+}
+
+function descending(a, b){
+    return b.labelAngle - a.labelAngle;
+}
 // First quadrant
-quadrants.push(hgraph.selectAll("g.q1").sort(function(a, b){
-    return a.labelAngle - b.labelAngle; // specific to this quadrant sort by ascending
-}));
-// Second quadrant
-quadrants.push(hgraph.selectAll("g.q2").sort(function(a, b){
-    return b.labelAngle - a.labelAngle; // descending order
-}));
+// sort by ascending
+quadrants.push(hgraph.selectAll("g.q1").sort(ascending));
 // Third quadrant
-quadrants.push(hgraph.selectAll("g.q3").sort(function(a, b){
-    return a.labelAngle - b.labelAngle; // ascending order
-}));
+quadrants.push(hgraph.selectAll("g.q3").sort(ascending));
+// Second quadrant
+// descending order
+quadrants.push(hgraph.selectAll("g.q2").sort(descending));
 // Fourth quadrant
-quadrants.push(hgraph.selectAll("g.q4").sort(function(a, b){
-    return b.labelAngle - a.labelAngle; // ascending order
-}));
+quadrants.push(hgraph.selectAll("g.q4").sort(descending));
 // loop through the quadrants
 for(var e = 0; e < quadrants.length; e++){
     quadrants[e].each(function (d, i) {

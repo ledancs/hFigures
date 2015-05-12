@@ -62,6 +62,8 @@ var hgraphWrapper = svg.append("g").attr("class", "hgraph-wrapper");
 
 var hgraph = hgraphWrapper.append("g").attr("class", "hgraph");
 
+var arcsG = hgraph.append("g").attr("class", "arcs");
+
 var points = [];
 
 function angleUnit(startAngle, padAngle, endAngle, n) {
@@ -72,7 +74,7 @@ function angleUnit(startAngle, padAngle, endAngle, n) {
     return space / (n + 1);
 }
 
-var arcs = hgraph.selectAll("g.arc")
+var arcs = arcsG.selectAll("g.arc")
     .data(pieObjects)
     .enter()
     .append("g")
@@ -105,86 +107,116 @@ arcs.each(function (d, i) {
     points = points.concat(pointsPerSection);
 });
 
-var groupLabels = hgraph.selectAll("g.groupLabels")
-    .data(dataByAngles)
-    .enter()
-    .append("g")
-    .attr("class", "groupLabels");
-
-var groupLabelsText = groupLabels.append("text")
-    .text(function(d){
-        return d.groupValues.label;
-    })
-    .attr("text-anchor", "middle")
-    .attr("x", function(d){
-        return Math.cos(d.labelAngle) * labelRadius;
-    })
-    .attr("y", function(d){
-        return (Math.sin(d.labelAngle) * labelRadius * -1);
-
-    })
-    .attr("font-size", w * 0.0275)
-    .each(function (d) {
-        d.bbox = getBox(this);
-    });
-
-var pathData = [];
-
-var groupLabelsFrame = addFrameBox(groupLabels)
-    .each(function (d) {
-        var box = getBox(this);
-        var dx = Math.cos(d.labelAngle) > 0 ? 0: box.width;
-        var dy = box.height/2;
-        d.line = [{
-            x: box.x + dx,
-            y: box.y + dy
-        }];
-    });
-
-
-// move them out of the background circle
-groupLabels.attr("transform", function(d){
-    var box = getBox(this);
-
+function labelCentroid(box, angle){
     var w = box.width * 1.065;
     var h = box.height * 1.065;
 
-    var cos = Math.cos(d.labelAngle);
-    var sin = Math.sin(d.labelAngle);
+    var cos = Math.cos(angle);
+    var sin = Math.sin(angle);
 
     w *= cos > 0 ? 1: -1;
     h *= sin > 0 ? -1: 1;
 
-    d.line.push({
-        x: (cos * outerRadius) - (w/2),
-        y: (sin * outerRadius * -1) - (h/2)
-    });
+    return {
+        x: w/2,
+        y: h/2
+    };
+}
 
-    return "translate(" + (w/2) + ", " + (h/2) + ")";
+function addFrameBox(labels){
+    return labels.append("rect")
+        .attr("x", function(d){
+            return d.bbox.x - 5;
+        })
+        .attr("y", function (d) {
+            return d.bbox.y;
+        })
+        .attr("height", function (d) {
+            return d.bbox.height;
+        })
+        .attr("width", function (d) {
+            return d.bbox.width + 10;
+        })
+        .attr({
+            "rx": 3,
+            "ry": 3,
+            "stroke": "grey",
+            // "fill": "#d5f5d5",
+            "fill": "white",
+            "stroke-width": 0.75
+        });
+}
+
+function addLabelText(groups, funcText, funcAngle, fontSize){
+    return groups.append("text")
+        .text(funcText) // get the text for each element
+        .attr("text-anchor", "middle")
+        .each(funcAngle) // get the angle
+        .attr("x", function(d){
+            return Math.cos(d.labelAngle) * d.labelRadius;
+        })
+        .attr("y", function(d){
+            return (Math.sin(d.labelAngle) * d.labelRadius * -1);
+        })
+        .attr("font-size", fontSize)
+        .each(function (d) {
+            d.bbox = getBox(this);
+        });
+}
+
+function getLabelLines(labels){
+    return labels.append("line")
+        .attr("x1", function (d) {
+            return Math.cos(d.labelAngle) > 0 ? d.frameBox.x: d.frameBox.x + d.frameBox.width;
+        })
+        .attr("y1", function (d) {
+            return d.frameBox.y + d.frameBox.height/2;
+        })
+        .attr("x2", function (d) {
+            return Math.cos(d.labelAngle) * (d.radius + 3) - d.xOffset;
+        })
+        .attr("y2", function (d) {
+            return (Math.sin(d.labelAngle) * (d.radius + 3) * - 1) - d.yOffset;
+        })
+        .attr({
+            "stroke": "grey",
+            "stroke-width": 1
+        })
+        .style("stroke-dasharray", ("1, 1"));
+}
+
+var groupLabelsG = hgraph.append("g").attr("class", "groupLabels");
+
+var groupLabels = groupLabelsG.selectAll("g.groupLabel")
+    .data(dataByAngles)
+    .enter()
+    .append("g")
+    .attr("class", "groupLabel");
+
+var groupLabelsText = addLabelText(groupLabels, function (d) {
+    return d.groupValues.label;
+}, function (d) {
+    d.labelRadius = labelRadius;
+    // group labels do not have a value associated
+    // so we set the outer radius as the reference ( the big circle )
+    d.radius = outerRadius;
+}, w * 0.0275);
+
+var groupLabelsFrame = addFrameBox(groupLabels);
+
+groupLabelsFrame.each(function (d) {
+    d.frameBox = getBox(this);
+    var center = labelCentroid(d.frameBox, d.labelAngle);
+    d.radius = outerRadius;
+    d.yOffset = center.y;
+    d.xOffset = center.x;
 });
 
-var lineFunction = d3.svg.line()
-    .x(function (d) {
-        return d.x;
-    })
-    .y(function (d) {
-        return d.y;
-    })
-    .tension(0)
-    .interpolate("cardinal-closed");
+groupLabels.attr("transform", function(d){
+    return "translate(" + (d.xOffset) + ", " + (d.yOffset) + ")";
+});
 
-groupLabels.append("path")
-    .attr("d", function (d) {
-        return lineFunction(d.line);
-    })
-    .attr({
-        "stroke": "grey",
-        "stroke-width": 2,
-        "fill": "none"
-    })
-    .attr("stroke-dasharray", function(){
-        return 3 + " " + 3;
-    });
+getLabelLines(groupLabels);
 
 // move the frame to the foreground
 groupLabelsFrame.each(function(){
@@ -245,91 +277,43 @@ for(var i = 0; i < pointsBySection.length; i++){
         });
 }
 
-/*
-pointsSection.selectAll("circle")
-    .data(function (d, i) {
-
-        return pointsBySection[i];
-    })
-    .enter()
-    .append("circle")
-    .attr({
-        "fill": "white",
-        "stroke": "#5b5b5b",
-        "stroke-width": 1,
-        "r": 3
-    })
-    .attr("cx", function (d) {
-        return d.coords[0];
-    })
-    .attr("cy", function (d) {
-        return d.coords[1];
-    });
-*/
-// labels for the circles
-
-var labels = hgraph.selectAll("g.labels")
+var labelsG = hgraph.append("g").attr("class", "labels");
+var labels = labelsG.selectAll("g.label")
     .data(points)
     .enter()
     .append("g")
-    .attr("class", "labels");
-
-
-
+    .attr("class", "label");
+/*
 var labelsText = labels.append("text")
     .text(function(d){
         return d.measurement.label + ": " + d.sample.value + " " + d.measurement.units;
     })
-    .each(function(d){
-        d.r = Math.max(d.radius + 10, outerRadius + 10);
-    })
     .attr("text-anchor", "middle")
     .attr("x", function(d){
-        return Math.cos(d.labelAngle) * d.r;
+        return Math.cos(d.labelAngle) * getMaxRadius(d.radius, outerRadius);
     })
     .attr("y", function(d){
-        return (Math.sin(d.labelAngle) * d.r * -1);
+        return (Math.sin(d.labelAngle) * getMaxRadius(d.radius, outerRadius) * -1);
     })
     .attr("font-size", w * 0.0125)
     .each(function (d) {
         d.bbox = getBox(this);
     });
+*/
+var labelsText = addLabelText(labels, function (d) {
+    return d.measurement.label + ": " + d.sample.value + " " + d.measurement.units;
+}, function (d) {
+    d.labelRadius = Math.max(d.radius + 10, outerRadius + 10);
+}, w * 0.0125);
 
-var labelsFrame = addFrameBox(labels)
-    .each(function (d) {
-        d.frameBox = getBox(this);
-    });
-
-function addFrameBox(labels){
-    return labels.append("rect")
-        .attr("x", function(d){
-            return d.bbox.x - 5;
-        })
-        .attr("y", function (d) {
-            return d.bbox.y;
-        })
-        .attr("height", function (d) {
-            return d.bbox.height;
-        })
-        .attr("width", function (d) {
-            return d.bbox.width + 10;
-        })
-        .attr({
-            "rx": 3,
-            "ry": 3,
-            "stroke": "grey",
-            // "fill": "#d5f5d5",
-            "fill": "white",
-            "stroke-width": 0.75
-        });
-}
+var labelsFrame = addFrameBox(labels);
 
 // move them out of the background circle
-labels.each(function (d) {
-    var boxW = Math.cos(d.labelAngle) > 0 ? d.frameBox.width: -d.frameBox.width;
-    d.xOffset = boxW / 2;
-    var boxH = Math.sin(d.labelAngle) > 0 ? -d.frameBox.height: d.frameBox.height;
-    d.yOffset = boxH / 2;
+labelsFrame.each(function (d) {
+    d.frameBox = getBox(this);
+    var center = labelCentroid(d.frameBox, d.labelAngle);
+    d.xOffset = center.x;
+    d.yOffset = center.y;
 });
 
 labels.attr("class", function(d){
@@ -390,24 +374,7 @@ labels.attr("transform", function(d){
     return "translate(" + d.xOffset + ", " + d.yOffset + ")";
 });
 
-labels.append("line")
-    .attr("x1", function (d) {
-        return Math.cos(d.labelAngle) > 0 ? d.frameBox.x: d.frameBox.x + d.frameBox.width;
-    })
-    .attr("y1", function (d) {
-        return d.frameBox.y + d.frameBox.height/2;
-    })
-    .attr("x2", function (d) {
-        return Math.cos(d.labelAngle) * (d.radius + 3) - d.xOffset;
-    })
-    .attr("y2", function (d) {
-        return (Math.sin(d.labelAngle) * (d.radius + 3) * - 1) - d.yOffset;
-    })
-    .attr({
-        "stroke": "grey",
-        "stroke-width": 1
-    })
-    .style("stroke-dasharray", ("1, 1"));
+getLabelLines(labels);
 
 labelsFrame.each(function(){
     this.parentNode.appendChild(this);

@@ -66,7 +66,7 @@ HealthMeasurement.prototype.computePosition = function () {
     this.x = Math.cos(this.angle) * this.radius;
     this.y = Math.sin(this.angle) * this.radius * -1;
 
-    this.color = this.additionalRanges ? "#74c476": "white";
+    this.color = this.additionalRanges ? "#73D651": "white";
 
     if(this["yellow_max"] && value >= this.max){
         this.color = "gold";
@@ -152,8 +152,8 @@ pie.padAngle(Math.PI / 105);
 var w = 800;
 var h = 800;
 
-var outerRadius = w * 0.25;
-var innerRadius = w * 0.165;
+var outerRadius = w * 0.27;
+var innerRadius = w * 0.17;
 var labelRadius = w * 0.32;
 
 var arc = d3.svg.arc()

@@ -2,11 +2,115 @@
  * Created by andres on 4/23/15.
  */
 
+// each circle has
+// name of the measurement
+// angle
+// optimal range
+// yellow ?
+// red ?
+// array of samples
+// selected sample
+// given a timestamp
+// each circle computes: radius, x, y, color
+// functions: first, last, next, previous, goto(timestamp)
+
+/**
+ *
+ * @param name
+ * @param units
+ * @param angle
+ * @param min
+ * @param max
+ * @param samples
+ * @param r0
+ * @param r1
+ * @constructor
+ */
+function HealthMeasurement(measurement, angle, r0, r1){
+
+    this.name = measurement.label,
+        this.r = 4, // this is the radius of the svg circle element
+        this.units = measurement.units,
+        this.angle = angle,
+        this.min = measurement.min,
+        this.max = measurement.max,
+        this.samples = measurement.samples,
+        this.sample = 0,
+        this.r0 = r0,// inner radius
+        this.r1 = r1,// outer radius
+        this.scale = d3.scale.linear()
+            .domain([this.min, this.max])
+            .range([this.r0, this.r1]);
+
+    this.x = this.y = this.radius = 0;
+    this.color = "white";
+    // check for yellow and red ranges
+    var ranges = HealthMeasurement.additionalRanges;
+    for(var i = 0; i < ranges.length; i++){
+        if (typeof measurement[ranges[i]] != 'undefined'){
+            this.color = "#74c476"; // default to greeen
+            this[ranges[i]] = measurement[ranges[i]];
+            console.log(this.name + " " + ranges[i]);
+        }
+    }
+
+    this.computePosition();
+}
+/**
+ * Computes the position and sets the x, y and radius based on the selected sample.
+ */
+HealthMeasurement.prototype.computePosition = function () {
+    var sample = this.samples[this.sample];
+    var value = sample.value;
+    this.radius = this.scale(value);
+    this.x = Math.cos(this.angle) * this.radius;
+    this.y = Math.sin(this.angle) * this.radius * -1;
+
+    if(this["yellow_max"] && value >= this["yellow_max"]){
+        this.color = "gold";
+    }
+    if(this["red_max"] && value >= this["red_max"]){
+        this.color = "tomato";
+    }
+
+    if(this["yellow_min"] && value <= this["yellow_min"]){
+        this.color = "gold";
+    }
+    if(this["red_min"] && value <= this["red_min"]){
+        this.color = "tomato";
+    }
+
+};
+
+HealthMeasurement.additionalRanges = ["yellow_min", "yellow_max", "red_min", "red_max"];
+
+function toDistanceString(healthMeasurements){
+    var arr = [];
+    for(var i = 0; i < healthMeasurements.length; i ++){
+        arr.push([healthMeasurements[i].x, healthMeasurements[i].y]);
+    }
+    return [arr];
+}
+
+/**
+ *
+ * @param margin
+ * @param border
+ * @constructor
+ */
 function LabelFixer(margin, border){
     this.margin = margin;
     this.border = border;
 }
-
+/**
+ * Adjusts the y coordinate to avoid overlapping for a set of measurements in a quadrant.
+ * @param i
+ * @param angle
+ * @param y
+ * @param height
+ * @param yOffset
+ * @returns {number|*}
+ */
 LabelFixer.prototype.adjustLabel = function (i, angle, y, height, yOffset){
     var delta = 0,
         upper = Math.sin(angle) >= 0;
@@ -28,7 +132,9 @@ LabelFixer.prototype.adjustLabel = function (i, angle, y, height, yOffset){
 
     return yOffset;
 };
-
+/**
+ * Resets the border before the next calculation begins.
+ */
 LabelFixer.prototype.resetBorder = function () {
     this.border = 0;
 };
@@ -83,6 +189,7 @@ var arcs = arcsG.selectAll("g.arc")
 var pointsPerSection = [];
 var dataByAngles = [];
 var pointsBySection = [];
+var hGraphMeasurements = [];
 
 arcs.append("path")
     .attr({
@@ -105,6 +212,11 @@ arcs.each(function (d, i) {
     pointsPerSection = generatePoints(i, d.startAngle, d.padAngle, d.endAngle);
     pointsBySection.push(pointsPerSection);
     points = points.concat(pointsPerSection);
+
+    // experiment
+    hGraphMeasurements = hGraphMeasurements.concat(
+        hGraphMeasurementsBuilder(i, d.startAngle, d.padAngle, d.endAngle)
+    );
 });
 
 function labelCentroid(box, angle){
@@ -138,8 +250,8 @@ function addFrameBox(labels){
             return d.bbox.width + 10;
         })
         .attr({
-            "rx": 3,
-            "ry": 3,
+            "rx": 1,
+            "ry": 1,
             "stroke": "grey",
             // "fill": "#d5f5d5",
             "fill": "white",
@@ -289,12 +401,10 @@ function collisionFix(labels){
 }
 
 // polygon
-hgraph.append("g").attr("class", "polygon").selectAll("polygon")
+var polygonGroup = hgraph.append("g").attr("class", "polygon");
+polygonGroup.selectAll("polygon")
     .data(function () {
-        var coordinates = [];
-        for(var i = 0; i < points.length; i ++)
-            coordinates.push(points[i].coords);
-        return [coordinates];
+        return [toDistanceString(hGraphMeasurements)];
     })
     .enter()
     .append("polygon")
@@ -308,34 +418,19 @@ hgraph.append("g").attr("class", "polygon").selectAll("polygon")
         "fill-opacity": 0.35
     });
 
-var pointsGroup = hgraph.append("g").attr("class", "pointsGroup");
-/*
- var pointsSection = pointsGroup.selectAll("g.pointsSection")
- .data(pointsBySection)
- .enter()
- .append("g")
- .attr("class", "pointsSection");
- */
-// select the sample as well
-for(var i = 0; i < pointsBySection.length; i++){
-    var g = pointsGroup.append("g").attr("class", "pointsInSection");
-    g.selectAll("circle")
-        .data(pointsBySection[i])
-        .enter()
-        .append("circle")
-        .attr({
-            "fill": "white",
-            "stroke": "#5b5b5b",
-            "stroke-width": 1,
-            "r": 3
-        })
-        .attr("cx", function (d) {
-            return d.coords[0];
-        })
-        .attr("cy", function (d) {
-            return d.coords[1];
-        });
-}
+var hGraphMeasurementsGroup = hgraph.append("g").attr("class", "hGraphMeasurements");
+hGraphMeasurementsGroup.selectAll("circle")
+    .data(hGraphMeasurements)
+    .enter()
+    .append("circle")
+    .attr("r", function(d){return d.r;})
+    .attr("cx", function(d){return d.x;})
+    .attr("cy", function(d){return d.y;})
+    .attr("fill", function(d){return d.color;})
+    .attr({
+        "stroke": "#5b5b5b",
+        "stroke-width": 1
+    });
 
 // flip the y axis
 // var scale = "scale(1, -1)";
@@ -359,12 +454,14 @@ function generatePoints(i, startAngle, padAngle, endAngle) {
     // console.log(startAngle);
     var ms = g.measurements;
     var n = ms.length;
+    // how many points in each section
+    // the angles of the points increase by the delta var
     var delta = angleUnit(startAngle, padAngle, endAngle, n);
     var angle, m, scale, s, v, x, y, r;
     var pointsInSection= [];
     for(var j = 0; j < n; j ++){
         m = ms[j];
-        s = m.samples[1];
+        s = m.samples[0];
         v = s.value;
         angle = startAngle + padAngle + ((j + 1) * delta);
         // move the result so it goes clockwise
@@ -381,10 +478,31 @@ function generatePoints(i, startAngle, padAngle, endAngle) {
             labelAngle: angle,
             measurement: m,
             sample: s
-    });
+        });
     }
+    // return the points in the whole section as an array
     return pointsInSection;
 }
+
+function hGraphMeasurementsBuilder(index, startAngle, padAngle, endAngle) {
+    var group = dataset[index];
+    var measurements = group.measurements;
+    var angleStepsPerMeasurement = angleUnit(startAngle, padAngle, endAngle, measurements.length);
+    var angle, dataM;
+    var hGraphMs = [];
+    var hGraphM = null;
+    for(var i = 0; i < measurements.length; i ++){
+        dataM = measurements[i];
+        angle = startAngle + padAngle + ((i + 1) * angleStepsPerMeasurement);
+        // move the result so it goes clockwise
+        angle = Math.PI / 2 - angle;
+        hGraphM = new HealthMeasurement(dataM, angle, innerRadius, outerRadius);
+        hGraphMs.push(hGraphM);
+    }
+    // return the points in the whole section as an array
+    return hGraphMs;
+}
+
 
 function getAngleAtSlice(startAngle, endAngle, padAngle, slice){
     var start = startAngle + padAngle/2;
@@ -451,7 +569,7 @@ GroupedAnimation.prototype.show = function(d3element){
 
 GroupedAnimation.prototype.dim = function(d3element){
     if(this.isVisible(d3element))
-        ga.animateOpacity(d3element, 0.2);
+        ga.animateOpacity(d3element, 0.1);
 };
 
 GroupedAnimation.prototype.hide = function(d3element){

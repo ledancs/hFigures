@@ -28,7 +28,7 @@
  */
 function HealthMeasurement(measurement, angle, r0, r1){
 
-    this.name = measurement.label,
+    this.label = measurement.label,
         this.r = 4, // this is the radius of the svg circle element
         this.units = measurement.units,
         this.angle = angle,
@@ -142,7 +142,7 @@ LabelFixer.prototype.resetBorder = function () {
 };
 
 var dataset = groups; // how many measurements per group
-
+var lf = new LabelFixer(5, 0); // fix label overlapping
 var pie = d3.layout.pie().value(function (d) {
     return d.measurements.length;
 }).sort(null);
@@ -171,8 +171,6 @@ var hgraphWrapper = svg.append("g").attr("class", "hgraph-wrapper");
 var hgraph = hgraphWrapper.append("g").attr("class", "hgraph");
 
 var arcsG = hgraph.append("g").attr("class", "arcs");
-
-var points = [];
 
 function angleUnit(startAngle, padAngle, endAngle, n) {
     var start = startAngle + padAngle/2;
@@ -204,16 +202,11 @@ arcs.append("path")
 arcs.each(function (d, i) {
 
     dataByAngles.push({
-        groupValues: dataset[i],
-        startAngle: d.startAngle,
-        endAngle: d.endAngle,
-        padAngle: d.padAngle,
-        labelAngle: getAngleAtSlice(d.startAngle, d.endAngle, d.padAngle, 2)
+        label: dataset[i].label,
+        angle: getAngleAtSlice(d.startAngle, d.endAngle, d.padAngle, 2),
+        labelRadius: labelRadius,
+        radius: outerRadius
     });
-
-    pointsPerSection = generatePoints(i, d.startAngle, d.padAngle, d.endAngle);
-    pointsBySection.push(pointsPerSection);
-    points = points.concat(pointsPerSection);
 
     // experiment
     hGraphMeasurements = hGraphMeasurements.concat(
@@ -261,16 +254,21 @@ function addFrameBox(labels){
         });
 }
 
-function addLabelText(groups, funcText, funcAngle, fontSize){
+function LabelText(text, fontSize, angle){
+    this.text = text,
+        this.fontSize = fontSize,
+        this.angle = angle;
+}
+
+function addLabelText(groups, fontSize){
     return groups.append("text")
-        .text(funcText) // get the text for each element
+        .text(function(d) {return d.label;})
         .attr("text-anchor", "middle")
-        .each(funcAngle) // get the angle
         .attr("x", function(d){
-            return Math.cos(d.labelAngle) * d.labelRadius;
+            return Math.cos(d.angle) * d.labelRadius;
         })
         .attr("y", function(d){
-            return (Math.sin(d.labelAngle) * d.labelRadius * -1);
+            return (Math.sin(d.angle) * d.labelRadius * -1);
         })
         .attr("font-size", fontSize)
         .each(function (d) {
@@ -281,16 +279,16 @@ function addLabelText(groups, funcText, funcAngle, fontSize){
 function addLabelLines(labels){
     return labels.append("line")
         .attr("x1", function (d) {
-            return Math.cos(d.labelAngle) > 0 ? d.frameBox.x: d.frameBox.x + d.frameBox.width;
+            return Math.cos(d.angle) > 0 ? d.frameBox.x: d.frameBox.x + d.frameBox.width;
         })
         .attr("y1", function (d) {
             return d.frameBox.y + d.frameBox.height/2;
         })
         .attr("x2", function (d) {
-            return Math.cos(d.labelAngle) * (d.radius + 3) - d.xOffset;
+            return Math.cos(d.angle) * (d.radius + 3) - d.xOffset;
         })
         .attr("y2", function (d) {
-            return (Math.sin(d.labelAngle) * (d.radius + 3) * - 1) - d.yOffset;
+            return (Math.sin(d.angle) * (d.radius + 3) * - 1) - d.yOffset;
         })
         .attr({
             "stroke": "grey",
@@ -305,35 +303,35 @@ var groupLabels = groupLabelsG.selectAll("g.groupLabel")
     .enter()
     .append("g")
     .attr("class", "groupLabel");
-buildLabels(groupLabels, function (d) {
-    return d.groupValues.label;
-}, function (d) {
-    d.labelRadius = labelRadius;
-    // group labels do not have a value associated
-    // so we set the outer radius as the reference ( the big circle )
-    d.radius = outerRadius;
-}, w * 0.0275);
+buildLabels(groupLabels, w * 0.0275);
+
+var labelData = [];
+for(var i = 0; i < hGraphMeasurements.length; i ++){
+    var m = hGraphMeasurements[i];
+    labelData.push({
+        label: m.label + ": " + m.samples[m.sample].value + " " + m.units,
+        angle: m.angle,
+        radius: m.radius,
+        labelRadius: Math.max(m.radius + 20, outerRadius + 10)
+    });
+}
 
 var labelsG = hgraph.append("g").attr("class", "labels");
 var labels = labelsG.selectAll("g.label")
-    .data(points)
+    .data(labelData)
     .enter()
     .append("g")
     .attr("class", "label");
 
-buildLabels(labels, function (d) {
-        return d.measurement.label + ": " + d.sample.value + " " + d.measurement.units;
-    }, function (d) {
-        d.labelRadius = Math.max(d.radius + 10, outerRadius + 10);
-    }, w * 0.0125);
+buildLabels(labels, w * 0.0125);
 
-function buildLabels(labels, funcText, funcAngle, fontSize){
-    var labelsText = addLabelText(labels, funcText, funcAngle, fontSize);
+function buildLabels(labels, fontSize){
+    var labelsText = addLabelText(labels, fontSize);
     var labelsFrame = addFrameBox(labels);
     // move them out of the background circle
     labelsFrame.each(function (d) {
         d.frameBox = getBox(this);
-        var center = labelCentroid(d.frameBox, d.labelAngle);
+        var center = labelCentroid(d.frameBox, d.angle);
         d.xOffset = center.x;
         d.yOffset = center.y;
     });
@@ -356,10 +354,25 @@ function between(x, min, max) {
 }
 
 function ascending(a, b){
-    return a.labelAngle - b.labelAngle;
+    return a.angle - b.angle;
 }
 function descending(a, b){
-    return b.labelAngle - a.labelAngle;
+    return b.angle - a.angle;
+}
+function getQuadrant(angle){
+    if(between(angle, 0, Math.PI/2))
+        return "q1";
+    if(between(angle, Math.PI/2, Math.PI))
+        return "q4";
+    if(between(angle, Math.PI, 3/2*Math.PI))
+        return "q3";
+    return "q4";
+}
+function runCollisionDetection(group){
+    group.each(function (d, i) {
+        d.yOffset = lf.adjustLabel(i, d.angle, d.frameBox.y, d.frameBox.height, d.yOffset);
+    });
+    lf.resetBorder();
 }
 
 function collisionFix(labels){
@@ -372,33 +385,15 @@ function collisionFix(labels){
         // so 1st quadrant begins from 12 o'clock
         // then quadrant 4rd, 3rd and we end in the 2nd.
         className = d3.select(this).attr("class");
-        angle = Math.PI / 2 - d.labelAngle;
-        return between(angle, 0, Math.PI/2) ? "q1" :
-            between(angle, Math.PI/2, Math.PI) ? "q4" :
-                between(angle, Math.PI, 3/2*Math.PI) ? "q3" : "q2";
+        angle = Math.PI / 2 - d.angle;
+        return getQuadrant(angle);
     });
-
     // collisions
-    var lf = new LabelFixer(7, 0);
-    var quadrants = [];
-
     // First quadrant
-    // sort by ascending
-    quadrants.push(hgraph.selectAll("g.q1").sort(ascending));
-    // Third quadrant
-    quadrants.push(hgraph.selectAll("g.q3").sort(ascending));
-    // Second quadrant
-    // descending order
-    quadrants.push(hgraph.selectAll("g.q2").sort(descending));
-    // Fourth quadrant
-    quadrants.push(hgraph.selectAll("g.q4").sort(descending));
-    // loop through the quadrants
-    for(var e = 0; e < quadrants.length; e++){
-        quadrants[e].each(function (d, i) {
-            d.yOffset = lf.adjustLabel(i, d.labelAngle, d.frameBox.y, d.frameBox.height, d.yOffset);
-        });
-        lf.resetBorder(); // reset the border
-    }
+    runCollisionDetection(hgraph.selectAll("g.q1").sort(ascending));
+    runCollisionDetection(hgraph.selectAll("g.q3").sort(ascending));
+    runCollisionDetection(hgraph.selectAll("g.q2").sort(descending));
+    runCollisionDetection(hgraph.selectAll("g.q4").sort(descending));
     labels.attr("class", className);
 }
 
@@ -447,44 +442,6 @@ hGraphMeasurementsGroup.selectAll("circle")
 // move the hgraph
 var translate = "translate(" + (w/2) + ", " + (h/2) + ")";
 hgraph.attr("transform", translate);
-
-// console.log(points.join(" "));
-
-function generatePoints(i, startAngle, padAngle, endAngle) {
-    var g = dataset[i];
-    // console.log(g.label);
-    // console.log(startAngle);
-    var ms = g.measurements;
-    var n = ms.length;
-    // how many points in each section
-    // the angles of the points increase by the delta var
-    var delta = angleUnit(startAngle, padAngle, endAngle, n);
-    var angle, m, scale, s, v, x, y, r;
-    var pointsInSection= [];
-    for(var j = 0; j < n; j ++){
-        m = ms[j];
-        s = m.samples[0];
-        v = s.value;
-        angle = startAngle + padAngle + ((j + 1) * delta);
-        // move the result so it goes clockwise
-        angle = Math.PI / 2 - angle;
-        scale = d3.scale.linear()
-            .domain([m.min, m.max])
-            .range([innerRadius, outerRadius]);
-        r = scale(v);
-        x = Math.cos(angle) * r;
-        y = Math.sin(angle) * r * -1;
-        pointsInSection.push({
-            coords: [x, y],
-            radius: r,
-            labelAngle: angle,
-            measurement: m,
-            sample: s
-        });
-    }
-    // return the points in the whole section as an array
-    return pointsInSection;
-}
 
 function hGraphMeasurementsBuilder(index, startAngle, padAngle, endAngle) {
     var group = dataset[index];

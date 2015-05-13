@@ -38,6 +38,7 @@ function HealthMeasurement(measurement, angle, r0, r1){
         this.sample = 0,
         this.r0 = r0,// inner radius
         this.r1 = r1,// outer radius
+        this.additionalRanges = false,
         this.scale = d3.scale.linear()
             .domain([this.min, this.max])
             .range([this.r0, this.r1]);
@@ -48,12 +49,11 @@ function HealthMeasurement(measurement, angle, r0, r1){
     var ranges = HealthMeasurement.additionalRanges;
     for(var i = 0; i < ranges.length; i++){
         if (typeof measurement[ranges[i]] != 'undefined'){
-            this.color = "#74c476"; // default to greeen
+            this.additionalRanges = true;
             this[ranges[i]] = measurement[ranges[i]];
-            console.log(this.name + " " + ranges[i]);
         }
     }
-
+    // compute the position and color
     this.computePosition();
 }
 /**
@@ -65,6 +65,8 @@ HealthMeasurement.prototype.computePosition = function () {
     this.radius = this.scale(value);
     this.x = Math.cos(this.angle) * this.radius;
     this.y = Math.sin(this.angle) * this.radius * -1;
+
+    this.color = this.additionalRanges ? "#74c476": "white";
 
     if(this["yellow_max"] && value >= this["yellow_max"]){
         this.color = "gold";

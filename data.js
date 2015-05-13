@@ -69,18 +69,20 @@ var groups = [
                 ]
             },
             {
-                min: 60,
-                max: 80,
+                min: 70,
+                max: 88,
+                yellow_max: 88,
+                red_max: 90,
                 units: "cm",
                 label: "Waist Diameter",
                 samples: [
                     {
                         timestamp: 1420798224,
-                        value: 65.3
+                        value: 75.3
                     },
                     {
                         timestamp: 1423742720,
-                        value: 64.8
+                        value: 75.8
                     }
                 ]
             }
@@ -134,9 +136,10 @@ var groups = [
         measurements:[
             {
                 min: 0,
-                max: 1.3,
+                max: 1,
+                yellow_min: 1,
                 units: "mmol/L",
-                label: "HDL (bad cholesterol)",
+                label: "HDL (good cholesterol)",
                 samples: [
                     {
                         timestamp: 1420798224,
@@ -149,24 +152,28 @@ var groups = [
                 ]
             },
             {
-                min: 5,
-                max: 8,
+                min: 0,
+                max: 3,
                 units: "mmol/L",
-                label: "LDL (good cholesterol)",
+                label: "LDL (bad cholesterol)",
+                yellow_max: 3,
+                red_max: 3.33,
                 samples: [
                     {
                         timestamp: 1420798224,
-                        value: 7.5
+                        value: 3.25
                     },
                     {
                         timestamp: 1423742720,
-                        value: 6.5
+                        value: 3.53
                     }
                 ]
             },
             {
                 min: 0,
                 max: 2,
+                yellow_max: 2,
+                red_max: 2.2,
                 units: "mmol/L",
                 label: "Triglycerides",
                 samples: [
@@ -179,22 +186,6 @@ var groups = [
                         value: 1.62
                     }
                 ]
-            },
-            {
-                min: 2,
-                max: 5,
-                units: "mmol/L",
-                label: "Cholesterol (total)",
-                samples: [
-                    {
-                        timestamp: 1420798224,
-                        value: 3.5
-                    },
-                    {
-                        timestamp: 1423742720,
-                        value: 3.84
-                    }
-                ]
             }
         ]
     },
@@ -204,7 +195,11 @@ var groups = [
         measurements:[
             {
                 min: 7,
-                max: 8,
+                max: 9,
+                yellow_min: 6,
+                yellow_max: 11,
+                red_min: 5,
+                red_max: 12,
                 units: "hours",
                 label: "Time in Bed",
                 samples: [
@@ -219,18 +214,20 @@ var groups = [
                 ]
             },
             {
-                min: 6,
-                max: 8,
-                units: "hours",
-                label: "Time actually asleep",
+                min: 85,
+                max: 100,
+                yellow_min: 75,
+                red_min: 65,
+                units: "%",
+                label: "Sleep efficiency",
                 samples: [
                     {
                         timestamp: 1420798224,
-                        value: 6
+                        value: 78
                     },
                     {
                         timestamp: 1423742720,
-                        value: 6.5
+                        value: 76
                     }
                 ]
             }

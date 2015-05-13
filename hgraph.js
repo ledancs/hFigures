@@ -46,7 +46,7 @@ function HealthMeasurement(measurement, angle, r0, r1){
     this.x = this.y = this.radius = 0;
     this.color = "white";
     // check for yellow and red ranges
-    var ranges = HealthMeasurement.additionalRanges;
+    var ranges = HealthMeasurement.additionalRanges; // shorthand
     for(var i = 0; i < ranges.length; i++){
         if (typeof measurement[ranges[i]] != 'undefined'){
             this.additionalRanges = true;
@@ -68,14 +68,14 @@ HealthMeasurement.prototype.computePosition = function () {
 
     this.color = this.additionalRanges ? "#74c476": "white";
 
-    if(this["yellow_max"] && value >= this["yellow_max"]){
+    if(this["yellow_max"] && value >= this.max){
         this.color = "gold";
     }
     if(this["red_max"] && value >= this["red_max"]){
         this.color = "tomato";
     }
 
-    if(this["yellow_min"] && value <= this["yellow_min"]){
+    if(this["yellow_min"] && value <= this.min){
         this.color = "gold";
     }
     if(this["red_min"] && value <= this["red_min"]){

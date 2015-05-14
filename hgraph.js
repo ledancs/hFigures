@@ -16,12 +16,8 @@
 
 /**
  *
- * @param name
- * @param units
+ * @param measurement
  * @param angle
- * @param min
- * @param max
- * @param samples
  * @param r0
  * @param r1
  * @constructor
@@ -38,8 +34,9 @@ function HealthMeasurement(measurement, angle, r0, r1){
         this.sample = 0,
         this.r0 = r0,// inner radius
         this.r1 = r1,// outer radius
-        this.additionalRanges = false,
-        this.scale = d3.scale.linear()
+        this.additionalRanges = false;
+
+    this.scale = d3.scale.linear()
             .domain([this.min, this.max])
             .range([this.r0, this.r1]);
 
@@ -92,6 +89,37 @@ function toDistanceString(healthMeasurements){
         arr.push([healthMeasurements[i].x, healthMeasurements[i].y]);
     }
     return [arr];
+}
+/**
+ *
+ * @param label
+ * @param fontSize
+ * @param angle
+ * @param r0
+ * @param r1
+ * @constructor
+ */
+function LabelText(label, fontSize, angle, r0, r1){
+    this.label = label,
+        this.fontSize = fontSize,
+        this.angle = angle,
+        this.r0 = r0,
+        this.r1 = r1,
+        this.frameBox = null;
+}
+/**
+ *
+ * @param x
+ * @param y
+ * @param width
+ * @param height
+ * @constructor
+ */
+function LabelFrame(x, y, width, height){
+    this.x = x,
+        this.y = y,
+        this.width = width,
+        this.height = height;
 }
 
 /**
@@ -156,21 +184,22 @@ var outerRadius = w * 0.27;
 var innerRadius = w * 0.17;
 var labelRadius = w * 0.32;
 
-var arc = d3.svg.arc()
+var arc;
+arc = d3.svg.arc()
     .innerRadius(innerRadius)
     .outerRadius(outerRadius);
 
-var svg = d3.select("div#hgraph-container")
+var svg = d3.select("div#hGraph-container")
     .append("svg")
     .attr("viewBox", "0 0 " + w + " " + h);
 
 var pieObjects = pie(dataset);
 
-var hgraphWrapper = svg.append("g").attr("class", "hgraph-wrapper");
+var hGraphWrapper = svg.append("g").attr("class", "hGraph-wrapper");
 
-var hgraph = hgraphWrapper.append("g").attr("class", "hgraph");
+var hGraph = hGraphWrapper.append("g").attr("class", "hGraph");
 
-var arcsG = hgraph.append("g").attr("class", "arcs");
+var arcsG = hGraph.append("g").attr("class", "arcs");
 
 function angleUnit(startAngle, padAngle, endAngle, n) {
     var start = startAngle + padAngle/2;
@@ -186,9 +215,7 @@ var arcs = arcsG.selectAll("g.arc")
     .append("g")
     .attr("class", "arc");
 
-var pointsPerSection = [];
 var dataByAngles = [];
-var pointsBySection = [];
 var hGraphMeasurements = [];
 
 arcs.append("path")
@@ -200,13 +227,9 @@ arcs.append("path")
     });
 
 arcs.each(function (d, i) {
-
-    dataByAngles.push({
-        label: dataset[i].label,
-        angle: getAngleAtSlice(d.startAngle, d.endAngle, d.padAngle, 2),
-        labelRadius: labelRadius,
-        radius: outerRadius
-    });
+    var label = dataset[i].label,
+        angle = getAngleAtSlice(d.startAngle, d.endAngle, d.padAngle, 2);
+    dataByAngles.push(new LabelText(label, w * 0.0275, angle, outerRadius, labelRadius));
 
     // experiment
     hGraphMeasurements = hGraphMeasurements.concat(
@@ -214,6 +237,70 @@ arcs.each(function (d, i) {
     );
 });
 
+var groupLabelsG = hGraph.append("g").attr("class", "groupLabels");
+var groupLabels = groupLabelsG.selectAll("g.groupLabel")
+    .data(dataByAngles)
+    .enter()
+    .append("g")
+    .attr("class", "groupLabel");
+buildLabels(groupLabels, w * 0.0275);
+
+var labelData = [];
+for(var i = 0; i < hGraphMeasurements.length; i ++){
+    var m = hGraphMeasurements[i],
+        fontSize = w * 0.0125,
+        label = m.label + ": " + m.samples[m.sample].value + " " + m.units,
+        r1 = Math.max(m.radius + 20, outerRadius + 10);
+    labelData.push(new LabelText(label, fontSize, m.angle, m.radius, r1));
+}
+
+var labelsG = hGraph.append("g").attr("class", "labels");
+var labels = labelsG.selectAll("g.label")
+    .data(labelData)
+    .enter()
+    .append("g")
+    .attr("class", "label");
+
+buildLabels(labels, w * 0.0125);
+
+function buildLabels(labels, fontSize){
+    // add the text
+    var labelsText = addLabelText(labels, fontSize);
+    // add the frame around
+    var labelsFrame = addFrameBox(labels);
+
+    // fix the collisions
+    collisionFix(labels);
+    // move the labels
+    labels.attr("transform", function(d){
+        return "translate(" + d.xOffset + ", " + d.yOffset + ")";
+    });
+    // append the line
+    addLabelLines(labels);
+    // move to frames to the front
+    labelsFrame.each(function(){
+        this.parentNode.appendChild(d3.select(this).node());
+    });
+    // move the text to the front
+    labelsText.each(function(){
+        this.parentNode.appendChild(d3.select(this).node());
+    });
+
+}
+function addLabelText(labels){
+    return labels.append("text")
+        .text(function(d) {return d.label;})
+        .attr("text-anchor", "middle")
+        .attr("x", function(d){return Math.cos(d.angle) * d.r1;})
+        .attr("y", function(d){return (Math.sin(d.angle) * d.r1 * -1);})
+        .attr("font-size", function(d){
+            return d.fontSize;
+        })
+        .each(function (d) {
+            var box = getBox(this);
+            d.frameBox = new LabelFrame(box.x, box.y, box.width, box.height);
+        });
+}
 function labelCentroid(box, angle){
     var w = box.width * 1.065;
     var h = box.height * 1.065;
@@ -232,18 +319,10 @@ function labelCentroid(box, angle){
 
 function addFrameBox(labels){
     return labels.append("rect")
-        .attr("x", function(d){
-            return d.bbox.x - 5;
-        })
-        .attr("y", function (d) {
-            return d.bbox.y;
-        })
-        .attr("height", function (d) {
-            return d.bbox.height;
-        })
-        .attr("width", function (d) {
-            return d.bbox.width + 10;
-        })
+        .attr("x", function(d){return d.frameBox.x - 5;})
+        .attr("y", function (d) {return d.frameBox.y;})
+        .attr("height", function (d) {return d.frameBox.height;})
+        .attr("width", function (d) {return d.frameBox.width + 10;})
         .attr({
             "rx": 1,
             "ry": 1,
@@ -251,31 +330,17 @@ function addFrameBox(labels){
             // "fill": "#d5f5d5",
             "fill": "white",
             "stroke-width": 0.75
-        });
-}
-
-function LabelText(text, fontSize, angle){
-    this.text = text,
-        this.fontSize = fontSize,
-        this.angle = angle;
-}
-
-function addLabelText(groups, fontSize){
-    return groups.append("text")
-        .text(function(d) {return d.label;})
-        .attr("text-anchor", "middle")
-        .attr("x", function(d){
-            return Math.cos(d.angle) * d.labelRadius;
         })
-        .attr("y", function(d){
-            return (Math.sin(d.angle) * d.labelRadius * -1);
-        })
-        .attr("font-size", fontSize)
         .each(function (d) {
-            d.bbox = getBox(this);
+            var box = getBox(this);
+            // override the frame box
+            d.frameBox = new LabelFrame(box.x, box.y, box.width, box.height);
+            var center = labelCentroid(d.frameBox, d.angle);
+            // add the offsets
+            d.xOffset = center.x;
+            d.yOffset = center.y;
         });
 }
-
 function addLabelLines(labels){
     return labels.append("line")
         .attr("x1", function (d) {
@@ -285,10 +350,10 @@ function addLabelLines(labels){
             return d.frameBox.y + d.frameBox.height/2;
         })
         .attr("x2", function (d) {
-            return Math.cos(d.angle) * (d.radius + 3) - d.xOffset;
+            return Math.cos(d.angle) * (d.r0 + 3) - d.xOffset;
         })
         .attr("y2", function (d) {
-            return (Math.sin(d.angle) * (d.radius + 3) * - 1) - d.yOffset;
+            return (Math.sin(d.angle) * (d.r0 + 3) * - 1) - d.yOffset;
         })
         .attr({
             "stroke": "grey",
@@ -296,63 +361,6 @@ function addLabelLines(labels){
         })
         .style("stroke-dasharray", ("1, 1"));
 }
-
-var groupLabelsG = hgraph.append("g").attr("class", "groupLabels");
-var groupLabels = groupLabelsG.selectAll("g.groupLabel")
-    .data(dataByAngles)
-    .enter()
-    .append("g")
-    .attr("class", "groupLabel");
-buildLabels(groupLabels, w * 0.0275);
-
-var labelData = [];
-for(var i = 0; i < hGraphMeasurements.length; i ++){
-    var m = hGraphMeasurements[i];
-    labelData.push({
-        label: m.label + ": " + m.samples[m.sample].value + " " + m.units,
-        angle: m.angle,
-        radius: m.radius,
-        labelRadius: Math.max(m.radius + 20, outerRadius + 10)
-    });
-}
-
-var labelsG = hgraph.append("g").attr("class", "labels");
-var labels = labelsG.selectAll("g.label")
-    .data(labelData)
-    .enter()
-    .append("g")
-    .attr("class", "label");
-
-buildLabels(labels, w * 0.0125);
-
-function buildLabels(labels, fontSize){
-    var labelsText = addLabelText(labels, fontSize);
-    var labelsFrame = addFrameBox(labels);
-    // move them out of the background circle
-    labelsFrame.each(function (d) {
-        d.frameBox = getBox(this);
-        var center = labelCentroid(d.frameBox, d.angle);
-        d.xOffset = center.x;
-        d.yOffset = center.y;
-    });
-    collisionFix(labels);
-    labels.attr("transform", function(d){
-        return "translate(" + d.xOffset + ", " + d.yOffset + ")";
-    });
-    addLabelLines(labels);
-    labelsFrame.each(function(){
-        this.parentNode.appendChild(this);
-    });
-    // move the labels on top of the rectangles
-    labelsText.each(function(){
-        this.parentNode.appendChild(this);
-    });
-
-}
-function between(x, min, max) {
-    return x >= min && x <= max;
-}
-
 function ascending(a, b){
     return a.angle - b.angle;
 }
@@ -368,7 +376,10 @@ function getQuadrant(angle){
         return "q3";
     return "q4";
 }
-function runCollisionDetection(group){
+function between(x, min, max) {
+    return x >= min && x <= max;
+}
+function adjustYOffset(group){
     group.each(function (d, i) {
         d.yOffset = lf.adjustLabel(i, d.angle, d.frameBox.y, d.frameBox.height, d.yOffset);
     });
@@ -390,15 +401,15 @@ function collisionFix(labels){
     });
     // collisions
     // First quadrant
-    runCollisionDetection(hgraph.selectAll("g.q1").sort(ascending));
-    runCollisionDetection(hgraph.selectAll("g.q3").sort(ascending));
-    runCollisionDetection(hgraph.selectAll("g.q2").sort(descending));
-    runCollisionDetection(hgraph.selectAll("g.q4").sort(descending));
+    adjustYOffset(hGraph.selectAll("g.q1").sort(ascending));
+    adjustYOffset(hGraph.selectAll("g.q3").sort(ascending));
+    adjustYOffset(hGraph.selectAll("g.q2").sort(descending));
+    adjustYOffset(hGraph.selectAll("g.q4").sort(descending));
     labels.attr("class", className);
 }
 
 // polygon
-var polygonGroup = hgraph.append("g").attr("class", "polygon");
+var polygonGroup = hGraph.append("g").attr("class", "polygon");
 polygonGroup.selectAll("polygon")
     .data(function () {
         return [toDistanceString(hGraphMeasurements)];
@@ -415,7 +426,7 @@ polygonGroup.selectAll("polygon")
         "fill-opacity": 0.35
     });
 
-var hGraphMeasurementsGroup = hgraph.append("g").attr("class", "hGraphMeasurements");
+var hGraphMeasurementsGroup = hGraph.append("g").attr("class", "hGraphMeasurements");
 hGraphMeasurementsGroup.selectAll("circle")
     .data(hGraphMeasurements)
     .enter()
@@ -437,11 +448,11 @@ hGraphMeasurementsGroup.selectAll("circle")
 // var transformations = [scale, rotate];
 // apply
 // arcs.attr("transform", transformations.join(" "));
-//pointsGroup.attr("transform", scale + " " + rotate);
-//polygon.attr("transform", scale + " " + rotate);
-// move the hgraph
+// pointsGroup.attr("transform", scale + " " + rotate);
+// polygon.attr("transform", scale + " " + rotate);
+// move the hGraph
 var translate = "translate(" + (w/2) + ", " + (h/2) + ")";
-hgraph.attr("transform", translate);
+hGraph.attr("transform", translate);
 
 function hGraphMeasurementsBuilder(index, startAngle, padAngle, endAngle) {
     var group = dataset[index];
@@ -556,7 +567,7 @@ var zoomCallback = function () {
 // two groups, and function to call first and after the groups have finished the animation
 var ga = new GroupedAnimation(2, zoomEntryCall, zoomCallback);
 // zoom and pan
-pzlib.setup("hgraph-container");
+pzlib.setup("hGraph-container");
 pzlib.deltaS = 0.50;
 pzlib.zoomLimit = 2.50;
 

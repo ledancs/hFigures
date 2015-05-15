@@ -2,12 +2,11 @@
  * Created by andres on 4/23/15.
  */
 
-function buildLabels(d2root, labels, fontSize){
+function buildLabels(d2root, labels){
     // add the text
-    var labelsText = addLabelText(labels, fontSize);
+    var labelsText = addLabelText(labels);
     // add the frame around
     var labelsFrame = addFrameBox(labels);
-
     // fix the collisions
     collisionFix(d2root, labels);
     // move the labels
@@ -26,6 +25,7 @@ function buildLabels(d2root, labels, fontSize){
     });
 
 }
+
 function addLabelText(labels){
     return labels.append("text")
         .text(function(d) {return d.label;})
@@ -73,7 +73,7 @@ function addFrameBox(labels){
         .each(function (d) {
             var box = getBox(this);
             // override the frame box
-            d.frameBox = new LabelFrame(box.x, box.y, box.width, box.height);
+            d.frameBox = new LabelFrame(box.x, box.y - 5, box.width, box.height + 2.5);
             var center = labelCentroid(d.frameBox, d.angle);
             // add the offsets
             d.xOffset = center.x;
@@ -122,8 +122,7 @@ function between(x, min, max) {
 
 function collisionFix(d3root, labels){
     var angle = 0;
-    var className = "";
-    var lf = new LabelFixer(5, 0); // fix label overlapping
+    var lf = new LabelFixer(8, 0); // fix label overlapping
 
     labels.attr("class", function(d){
         // since we shift the angles as a clock
@@ -131,7 +130,7 @@ function collisionFix(d3root, labels){
         // from there it is clockwise
         // so 1st quadrant begins from 12 o'clock
         // then quadrant 4rd, 3rd and we end in the 2nd.
-        className = d3.select(this).attr("class");
+        d.className = d3.select(this).attr("class");
         angle = Math.PI / 2 - d.angle;
         return getQuadrant(angle);
     });
@@ -140,12 +139,11 @@ function collisionFix(d3root, labels){
     lf.adjust(d3root.selectAll("g.q3").sort(ascending));
     lf.adjust(d3root.selectAll("g.q2").sort(descending));
     lf.adjust(d3root.selectAll("g.q4").sort(descending));
-    labels.attr("class", className); // reset the style
+    labels.attr("class", function(d){ return d.className; }); // reset the style
 }
 
 function hGraphMeasurementsBuilder(measurementGroup, startAngle, padAngle, endAngle, innerRadius, outerRadius) {
-    var group = measurementGroup;
-    var measurements = group.measurements;
+    var measurements = measurementGroup.measurements;
     var angleStepsPerMeasurement = angleUnit(startAngle, padAngle, endAngle, measurements.length);
     var angle, dataM;
     var hGraphMs = [];
@@ -215,17 +213,17 @@ function getBox(svgElement){
  */
 function HealthMeasurement(measurement, angle, r0, r1){
 
-    this.label = measurement.label,
-        this.r = 4, // this is the radius of the svg circle element
-        this.units = measurement.units,
-        this.angle = angle,
-        this.min = measurement.min,
-        this.max = measurement.max,
-        this.samples = measurement.samples,
-        this.sample = 0,
-        this.r0 = r0,// inner radius
-        this.r1 = r1,// outer radius
-        this.additionalRanges = false;
+    this.label = measurement.label;
+    this.r = 4; // this is the radius of the svg circle element
+    this.units = measurement.units;
+    this.angle = angle;
+    this.min = measurement.min;
+    this.max = measurement.max;
+    this.samples = measurement.samples;
+    this.sample = 0;
+    this.r0 = r0; // inner radius
+    this.r1 = r1; // outer radius
+    this.additionalRanges = false;
 
     this.scale = d3.scale.linear()
             .domain([this.min, this.max])
@@ -291,12 +289,13 @@ function toDistanceString(healthMeasurements){
  * @constructor
  */
 function LabelText(label, fontSize, angle, r0, r1){
-    this.label = label,
-        this.fontSize = fontSize,
-        this.angle = angle,
-        this.r0 = r0,
-        this.r1 = r1,
-        this.frameBox = null;
+    this.label = label;
+    this.fontSize = fontSize;
+    this.angle = angle;
+    this.r0 = r0;
+    this.r1 = r1;
+    this.frameBox = null;
+    this.className = "";
 }
 /**
  *
@@ -307,10 +306,10 @@ function LabelText(label, fontSize, angle, r0, r1){
  * @constructor
  */
 function LabelFrame(x, y, width, height){
-    this.x = x,
-        this.y = y,
-        this.width = width,
-        this.height = height;
+    this.x = x;
+    this.y = y;
+    this.width = width;
+    this.height = height;
 }
 
 /**
@@ -370,9 +369,9 @@ LabelFixer.prototype.adjust = function (d3group){
         d.yOffset = self.adjustLabel(i, d.angle, d.frameBox.y, d.frameBox.height, d.yOffset);
     });
     self.resetBorder();
-}
+};
 
-function render(dataset){
+function hGraphBuilder(dataset){
     var pie = d3.layout.pie().value(function (d) {
         return d.measurements.length;
     }).sort(null);
@@ -431,6 +430,7 @@ function render(dataset){
         );
     });
 
+    /*
     var groupLabelsG = hGraph.append("g").attr("class", "groupLabels");
     var groupLabels = groupLabelsG.selectAll("g.groupLabel")
         .data(dataByAngles)
@@ -438,6 +438,7 @@ function render(dataset){
         .append("g")
         .attr("class", "groupLabel");
     buildLabels(groupLabelsG, groupLabels, w * 0.0275);
+    */
 
     var labelData = [];
     for(var i = 0; i < hGraphMeasurements.length; i ++){
@@ -450,12 +451,32 @@ function render(dataset){
 
     var labelsG = hGraph.append("g").attr("class", "labels");
     var labels = labelsG.selectAll("g.label")
-        .data(labelData)
+        .data(labelData.concat(dataByAngles))
         .enter()
         .append("g")
         .attr("class", "label");
 
-    buildLabels(labelsG, labels, w * 0.0125);
+    buildLabels(labelsG, labels); // font-size: w * 0.0125
+
+    /*
+     var measurementLabelsG = hGraph.append("g").attr("class", "measurementLabels");
+     var measurementLabels = measurementLabelsG.selectAll("g.measurementLabels")
+     .data(labelData.concat(dataByAngles))
+     .enter()
+     .append("g")
+     .attr("class", "measurementLabels");
+     buildLabels(measurementLabels, labels); // font-size: w * 0.0125
+     */
+
+    labels.attr("class", function (d) {
+        return d.fontSize > w * 0.0125 ? "groupLabel" : "measurementLabel";
+    });
+
+    /*
+     labelsFrame.each(function(){
+     this.parentNode.appendChild(d3.select(this).node());
+     });
+     */
 
     // polygon
     var polygonGroup = hGraph.append("g").attr("class", "polygon");
@@ -502,99 +523,6 @@ function render(dataset){
     // move the hGraph
     var translate = "translate(" + (w/2) + ", " + (h/2) + ")";
     hGraph.attr("transform", translate);
-
-    // show and hide
-    labels.attr("opacity", 0);
-    groupLabels.attr("opacity", 1);
-
-    // this is app specific code
-    // pan and zoom lib
-    // setup the group animations
-    var zoomEntryCall = function () {
-        pzlib.allowZoom = false; // disable zoom
-    };
-    var zoomCallback = function () {
-        pzlib.allowZoom = true; // enable zoom
-    };
-    // two groups, and function to call first and after the groups have finished the animation
-    var ga = new GroupedAnimation(2, zoomEntryCall, zoomCallback);
-    // zoom and pan
-    pzlib.setup("hGraph-container");
-    pzlib.deltaS = 0.50;
-    pzlib.zoomLimit = 2.50;
-
-    pzlib.afterZoom = function () {
-        pzlib.zoomLevel > 1 ? zoomInAction(): zoomOutAction();
-    };
-
-    function zoomInAction(){
-        ga.show(labels);
-        ga.dim(groupLabels);
-    }
-
-    function zoomOutAction(){
-        ga.show(groupLabels);
-        ga.hide(labels);
-    }
+    // for further extension we return the hGraph instance
+    return hGraph;
 }
-
-/**
- *
- * @param {number} n - Number of groups to be animated
- * @param {function} entryCall - Function to call when the animation starts
- * @param {function} callback - Function to call when the animation ends
- * @constructor
- */
-function GroupedAnimation(n, entryCall, callback){
-    this.n = n;
-    this.elementsDone = 0;
-    this.entryCall = entryCall;
-    this.callback = callback;
-}
-
-GroupedAnimation.prototype.animateOpacity = function (d3element, val) {
-    this.entryCall();
-    var self = this;
-    d3element
-        .transition()
-        .attr("opacity", val)
-        .duration(1300)
-        .call(endAll, function(){ self.check.apply(self); });
-};
-
-function endAll(transition, callback) {
-    if (transition.size() === 0) { callback() }
-    var n = 0;
-    transition
-        .each(function() { ++n; })
-        .each("end", function() { if (!--n) callback.apply(this, arguments); });
-}
-
-// there are several groups that are being animated each with different elements so we
-// need to make sure that all the groups and their elements have finished the animation
-GroupedAnimation.prototype.check = function () {
-    this.elementsDone++;
-    if(this.elementsDone === this.n){
-        this.elementsDone = 0;
-        this.callback();
-    }
-};
-
-GroupedAnimation.prototype.isVisible = function(d3element){
-    return parseInt(d3element.attr("opacity")) != 0;
-};
-
-GroupedAnimation.prototype.show = function(d3element){
-    if(!this.isVisible(d3element))
-        this.animateOpacity(d3element, 1);
-};
-
-GroupedAnimation.prototype.dim = function(d3element){
-    if(this.isVisible(d3element))
-        this.animateOpacity(d3element, 0.1);
-};
-
-GroupedAnimation.prototype.hide = function(d3element){
-    if(this.isVisible(d3element))
-        this.animateOpacity(d3element, 0);
-};

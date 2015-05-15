@@ -30,10 +30,13 @@
 </head>
 <body>
 <div id="hGraph-container" class="hGraph-container"></div>
-<script src="pzlib.js" type="application/javascript"></script>
-<script src="hgraph.js" type="application/javascript"></script>
+<script src="apps/panZoom/pzlib.js" type="application/javascript"></script>
+<script src="hGraph.js" type="application/javascript"></script>
+<script src="apps/panZoom/hGraphPanZoomApp.js" type="application/javascript"></script>
 <script type="text/javascript">
-    render(groups); // from data.js
+    var hGraph = hGraphBuilder(groups); // from data.js
+    // now we can extend and manipulate the hGraph
+    // hGraphPanZoomApp(hGraph);
 </script>
 </body>
 </html>

@@ -78,7 +78,8 @@ function addFrameBox(labels){
             var center = labelCentroid(d.frameBox, d.angle);
             // add the offsets
             d.xOffset = center.x;
-            d.yOffset = center.y;
+            // d.yOffset = center.y;
+            d.yOffset = 0;
         });
 }
 function addLabelLines(labels){
@@ -124,7 +125,7 @@ function between(x, min, max) {
 
 function collisionFix(d3root, labels){
     var angle = 0;
-    var lf = new LabelFixer(7, 0); // fix label overlapping
+    var lf = new LabelFixer(2, 0); // fix label overlapping
 
     labels.attr("class", function(d){
         // since we shift the angles as a clock
@@ -379,16 +380,16 @@ function hGraphBuilder(dataset){
         return d.measurements.length;
     }).sort(null);
 
-    pie.padAngle(Math.PI / 105);
+    pie.padAngle(Math.PI / 256); // adjust as well depending on the number of measurements
 
     var w = 800;
-    var h = 800;
+    var h = 1000;
 
     var outerRadius = w * 0.27;
     var innerRadius = w * 0.17;
-    var labelRadius = w * 0.35;
+    var labelRadius = w * 0.3575;
 
-    var fontGroup = 18;
+    var fontGroup = 16;
     var fontMeasurement = 12;
     var circleRadius = 5;
 
@@ -485,7 +486,7 @@ function hGraphBuilder(dataset){
     for(var i = 0; i < hGraphMeasurements.length; i ++){
         var m = hGraphMeasurements[i],
             label = m.label + ": " + m.samples[m.sample].value + " " + m.units,
-            r1 = Math.max(m.radius + 20, outerRadius + 50);
+            r1 = Math.max(m.radius + 20, labelRadius);
         labelData.push(new LabelText(label, fontMeasurement, m.angle, m.radius, r1, circleRadius));
     }
 

@@ -90,10 +90,10 @@ function addLabelLines(labels){
             return Math.sin(d.angle) > 0 ? d.frameBox.y + d.frameBox.height: d.frameBox.y;
         })
         .attr("x2", function (d) {
-            return Math.cos(d.angle) * (d.r0 + 2) - d.xOffset;
+            return Math.cos(d.angle) * (d.r0 + d.r) - d.xOffset;
         })
         .attr("y2", function (d) {
-            return (Math.sin(d.angle) * (d.r0 + 2) * - 1) - d.yOffset;
+            return (Math.sin(d.angle) * (d.r0 + d.r) * - 1) - d.yOffset;
         })
         .attr({
             "stroke": "grey",
@@ -124,7 +124,7 @@ function between(x, min, max) {
 
 function collisionFix(d3root, labels){
     var angle = 0;
-    var lf = new LabelFixer(4, 0); // fix label overlapping
+    var lf = new LabelFixer(7, 0); // fix label overlapping
 
     labels.attr("class", function(d){
         // since we shift the angles as a clock
@@ -144,7 +144,7 @@ function collisionFix(d3root, labels){
     labels.attr("class", function(d){ return d.className; }); // reset the style
 }
 
-function hGraphMeasurementsBuilder(measurementGroup, startAngle, padAngle, endAngle, innerRadius, outerRadius) {
+function hGraphMeasurementsBuilder(measurementGroup, startAngle, padAngle, endAngle, innerRadius, outerRadius, circleRadius) {
     var measurements = measurementGroup.measurements;
     var angleStepsPerMeasurement = angleUnit(startAngle, padAngle, endAngle, measurements.length);
     var angle, dataM;
@@ -155,7 +155,7 @@ function hGraphMeasurementsBuilder(measurementGroup, startAngle, padAngle, endAn
         angle = startAngle + padAngle + ((i + 1) * angleStepsPerMeasurement);
         // move the result so it goes clockwise
         angle = Math.PI / 2 - angle;
-        hGraphM = new HealthMeasurement(dataM, angle, innerRadius, outerRadius);
+        hGraphM = new HealthMeasurement(dataM, angle, innerRadius, outerRadius, circleRadius);
         hGraphMs.push(hGraphM);
     }
     // return the points in the whole section as an array
@@ -213,10 +213,10 @@ function getBox(svgElement){
  * @param r1
  * @constructor
  */
-function HealthMeasurement(measurement, angle, r0, r1){
+function HealthMeasurement(measurement, angle, r0, r1, r){
 
     this.label = measurement.label;
-    this.r = 2; // this is the radius of the svg circle element
+    this.r = r; // this is the radius of the svg circle element
     this.units = measurement.units;
     this.angle = angle;
     this.min = measurement.min;
@@ -290,12 +290,13 @@ function toDistanceString(healthMeasurements){
  * @param r1
  * @constructor
  */
-function LabelText(label, fontSize, angle, r0, r1){
+function LabelText(label, fontSize, angle, r0, r1, r){
     this.label = label;
     this.fontSize = fontSize;
     this.angle = angle;
     this.r0 = r0;
     this.r1 = r1;
+    this.r = r;
     this.frameBox = null;
     this.className = "";
 }
@@ -385,10 +386,11 @@ function hGraphBuilder(dataset){
 
     var outerRadius = w * 0.27;
     var innerRadius = w * 0.17;
-    var labelRadius = w * 0.32;
+    var labelRadius = w * 0.35;
 
-    var fontGroup = 10;
-    var fontMeasurement = 7.5;
+    var fontGroup = 18;
+    var fontMeasurement = 12;
+    var circleRadius = 5;
 
     var arc;
     arc = d3.svg.arc()
@@ -427,11 +429,11 @@ function hGraphBuilder(dataset){
     arcs.each(function (d, i) {
         var label = dataset[i].label,
             angle = getAngleAtSlice(d.startAngle, d.endAngle, d.padAngle, 2);
-        dataByAngles.push(new LabelText(label, fontGroup, angle, outerRadius, labelRadius));
+        dataByAngles.push(new LabelText(label, fontGroup, angle, outerRadius, labelRadius, 0));
 
         // experiment
         hGraphMeasurements = hGraphMeasurements.concat(
-            hGraphMeasurementsBuilder(dataset[i], d.startAngle, d.padAngle, d.endAngle, innerRadius, outerRadius)
+            hGraphMeasurementsBuilder(dataset[i], d.startAngle, d.padAngle, d.endAngle, innerRadius, outerRadius, circleRadius)
         );
     });
 
@@ -484,7 +486,7 @@ function hGraphBuilder(dataset){
         var m = hGraphMeasurements[i],
             label = m.label + ": " + m.samples[m.sample].value + " " + m.units,
             r1 = Math.max(m.radius + 20, outerRadius + 50);
-        labelData.push(new LabelText(label, fontMeasurement, m.angle, m.radius, r1));
+        labelData.push(new LabelText(label, fontMeasurement, m.angle, m.radius, r1, circleRadius));
     }
 
     var labelsG = hGraph.append("g").attr("class", "labels");

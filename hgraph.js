@@ -65,12 +65,12 @@ function addFrameBox(labels){
         .attr({
             "rx": 1,
             "ry": 1,
-            "stroke": "grey",
             // "fill": "#d5f5d5",
             "fill": "white",
-            "stroke-width": 0.75,
             "vector-effect": "non-scaling-stroke"
         })
+        .attr("stroke", function(d){ return d.lineColor; })
+        .attr("stroke-width", function(d){ return d.lineWidth; })
         .each(function (d) {
             var box = getBox(this);
             // override the frame box
@@ -88,7 +88,12 @@ function addLabelLines(labels){
             return Math.cos(d.angle) > 0 ? d.frameBox.x: d.frameBox.x + d.frameBox.width;
         })
         .attr("y1", function (d) {
-            return Math.sin(d.angle) > 0 ? d.frameBox.y + d.frameBox.height: d.frameBox.y;
+            if(d.angle > Math.PI / 2 - 1/3 * Math.PI || d.angle < Math.PI / 2 - Math.PI - 2/3 * Math.PI)
+                return d.frameBox.y + d.frameBox.height;
+            if(d.angle < Math.PI / 2 - 2/3 * Math.PI && d.angle > Math.PI / 2 - Math.PI - 1/3 * Math.PI)
+                return d.frameBox.y;
+            return d.frameBox.y + d.frameBox.height/2;
+            // return Math.sin(d.angle) > 0 ? d.frameBox.y + d.frameBox.height: d.frameBox.y;
         })
         .attr("x2", function (d) {
             return Math.cos(d.angle) * (d.r0 + d.r) - d.xOffset;
@@ -97,10 +102,10 @@ function addLabelLines(labels){
             return (Math.sin(d.angle) * (d.r0 + d.r) * - 1) - d.yOffset;
         })
         .attr({
-            "stroke": "grey",
-            "stroke-width": 1,
             "vector-effect": "non-scaling-stroke"
-        });
+        })
+        .attr("stroke", function(d){ return d.lineColor; })
+        .attr("stroke-width", function(d){ return d.lineWidth; });
         // .style("stroke-dasharray", ("1, 1"));
 }
 function ascending(a, b){
@@ -125,7 +130,7 @@ function between(x, min, max) {
 
 function collisionFix(d3root, labels){
     var angle = 0;
-    var lf = new LabelFixer(2, 0); // fix label overlapping
+    var lf = new LabelFixer(7, 0); // fix label overlapping
 
     labels.attr("class", function(d){
         // since we shift the angles as a clock
@@ -291,7 +296,7 @@ function toDistanceString(healthMeasurements){
  * @param r1
  * @constructor
  */
-function LabelText(label, fontSize, angle, r0, r1, r){
+function LabelText(label, fontSize, angle, r0, r1, r, lineColor, lineWidth){
     this.label = label;
     this.fontSize = fontSize;
     this.angle = angle;
@@ -300,6 +305,8 @@ function LabelText(label, fontSize, angle, r0, r1, r){
     this.r = r;
     this.frameBox = null;
     this.className = "";
+    this.lineColor = lineColor;
+    this.lineWidth = lineWidth;
 }
 /**
  *
@@ -336,7 +343,7 @@ function LabelFixer(margin, border){
  * @returns {number|*}
  */
 LabelFixer.prototype.adjustLabel = function (i, angle, y, height, yOffset){
-    var delta = 0,
+    var delta = i === 0 ? this.margin: 0,
         upper = Math.sin(angle) >= 0;
 
     var collision = upper ?
@@ -382,15 +389,15 @@ function hGraphBuilder(dataset){
 
     pie.padAngle(Math.PI / 256); // adjust as well depending on the number of measurements
 
-    var w = 800;
+    var w = 1000;
     var h = 1000;
 
-    var outerRadius = w * 0.27;
-    var innerRadius = w * 0.17;
-    var labelRadius = w * 0.3575;
+    var outerRadius = 250;
+    var innerRadius = 150;
+    var labelRadius = 325;
 
-    var fontGroup = 16;
-    var fontMeasurement = 12;
+    var fontGroup = 22;
+    var fontMeasurement = 14;
     var circleRadius = 5;
 
     var arc;
@@ -430,13 +437,40 @@ function hGraphBuilder(dataset){
     arcs.each(function (d, i) {
         var label = dataset[i].label,
             angle = getAngleAtSlice(d.startAngle, d.endAngle, d.padAngle, 2);
-        dataByAngles.push(new LabelText(label, fontGroup, angle, outerRadius, labelRadius, 0));
+        dataByAngles.push(new LabelText(label, fontGroup, angle, outerRadius, labelRadius, 0, "#74c476", 3));
 
         // experiment
         hGraphMeasurements = hGraphMeasurements.concat(
             hGraphMeasurementsBuilder(dataset[i], d.startAngle, d.padAngle, d.endAngle, innerRadius, outerRadius, circleRadius)
         );
     });
+
+    /*
+    var groupLabelsG = hGraph.append("g").attr("class", "groupLabels");
+    var groupLabels = groupLabelsG.selectAll("g.groupLabel")
+        .data(dataByAngles)
+        .enter()
+        .append("g")
+        .attr("class", "groupLabel");
+    buildLabels(groupLabelsG, groupLabels, w * 0.0275);
+    */
+
+    var labelData = [];
+    for(var i = 0; i < hGraphMeasurements.length; i ++){
+        var m = hGraphMeasurements[i],
+            label = m.label + ": " + m.samples[m.sample].value + " " + m.units,
+            r1 = Math.max(m.radius + 20, labelRadius);
+        labelData.push(new LabelText(label, fontMeasurement, m.angle, m.radius, r1, circleRadius, "grey", 1));
+    }
+
+    var labelsG = hGraph.append("g").attr("class", "labels");
+    var labels = labelsG.selectAll("g.label")
+        .data(labelData.concat(dataByAngles))
+        .enter()
+        .append("g")
+        .attr("class", "label");
+
+    buildLabels(labelsG, labels); // font-size: w * 0.0125
 
     // polygon
     var polygonGroup = hGraph.append("g").attr("class", "polygon");
@@ -470,34 +504,6 @@ function hGraphBuilder(dataset){
             "stroke-width": 1,
             "vector-effect": "non-scaling-stroke"
         });
-
-
-    /*
-    var groupLabelsG = hGraph.append("g").attr("class", "groupLabels");
-    var groupLabels = groupLabelsG.selectAll("g.groupLabel")
-        .data(dataByAngles)
-        .enter()
-        .append("g")
-        .attr("class", "groupLabel");
-    buildLabels(groupLabelsG, groupLabels, w * 0.0275);
-    */
-
-    var labelData = [];
-    for(var i = 0; i < hGraphMeasurements.length; i ++){
-        var m = hGraphMeasurements[i],
-            label = m.label + ": " + m.samples[m.sample].value + " " + m.units,
-            r1 = Math.max(m.radius + 20, labelRadius);
-        labelData.push(new LabelText(label, fontMeasurement, m.angle, m.radius, r1, circleRadius));
-    }
-
-    var labelsG = hGraph.append("g").attr("class", "labels");
-    var labels = labelsG.selectAll("g.label")
-        .data(labelData.concat(dataByAngles))
-        .enter()
-        .append("g")
-        .attr("class", "label");
-
-    buildLabels(labelsG, labels); // font-size: w * 0.0125
 
     /*
      var measurementLabelsG = hGraph.append("g").attr("class", "measurementLabels");

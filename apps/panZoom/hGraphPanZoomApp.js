@@ -68,6 +68,14 @@ GroupedAnimation.prototype.hide = function(d3element){
 function hGraphPanZoomApp(hGraph){
     // show and hide
     var groupLabels = hGraph.select("g.labels").selectAll("g.groupLabel");
+    groupLabels.selectAll("rect")
+        .attr({
+            "stroke-width": 1
+        });
+    groupLabels.selectAll("line")
+        .attr({
+            "stroke-width": 1
+        });
     var measurementLabels = hGraph.select("g.labels").selectAll("g.measurementLabel");
 
     // show and hide

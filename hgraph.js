@@ -437,7 +437,7 @@ function hGraphBuilder(dataset){
     arcs.each(function (d, i) {
         var label = dataset[i].label,
             angle = getAngleAtSlice(d.startAngle, d.endAngle, d.padAngle, 2);
-        dataByAngles.push(new LabelText(label, fontGroup, angle, outerRadius, labelRadius, 0, "#74c476", 3));
+        dataByAngles.push(new LabelText(label, fontGroup, angle, outerRadius, labelRadius, 0, "#74c476", 2));
 
         // experiment
         hGraphMeasurements = hGraphMeasurements.concat(

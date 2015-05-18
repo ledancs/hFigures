@@ -217,6 +217,7 @@ function getBox(svgElement){
  * @param angle
  * @param r0
  * @param r1
+ * @param r
  * @constructor
  */
 function HealthMeasurement(measurement, angle, r0, r1, r){
@@ -294,6 +295,9 @@ function toDistanceString(healthMeasurements){
  * @param angle
  * @param r0
  * @param r1
+ * @param r
+ * @param lineColor
+ * @param lineWidth
  * @constructor
  */
 function LabelText(label, fontSize, angle, r0, r1, r, lineColor, lineWidth){

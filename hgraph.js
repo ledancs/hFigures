@@ -393,12 +393,12 @@ function hGraphBuilder(dataset, w, h){
 
     pie.padAngle(Math.PI / 256); // adjust as well depending on the number of measurements
 
-    var outerRadius = w * 0.25;
-    var innerRadius = w * 0.15;
-    var labelRadius = w * 0.35;
+    var outerRadius = w * 0.27;
+    var innerRadius = w * 0.18;
+    var labelRadius = w * 0.37;
 
-    var fontGroup = 20;
-    var fontMeasurement = 12;
+    var fontGroup = 16;
+    var fontMeasurement = 8;
     var circleRadius = 5;
 
     var arc;

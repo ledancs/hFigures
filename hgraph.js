@@ -386,22 +386,19 @@ LabelFixer.prototype.adjust = function (d3group){
     self.resetBorder();
 };
 
-function hGraphBuilder(dataset){
+function hGraphBuilder(dataset, w, h){
     var pie = d3.layout.pie().value(function (d) {
         return d.measurements.length;
     }).sort(null);
 
     pie.padAngle(Math.PI / 256); // adjust as well depending on the number of measurements
 
-    var w = 1000;
-    var h = 1000;
+    var outerRadius = w * 0.25;
+    var innerRadius = w * 0.15;
+    var labelRadius = w * 0.35;
 
-    var outerRadius = 250;
-    var innerRadius = 150;
-    var labelRadius = 325;
-
-    var fontGroup = 22;
-    var fontMeasurement = 14;
+    var fontGroup = 20;
+    var fontMeasurement = 12;
     var circleRadius = 5;
 
     var arc;
@@ -409,13 +406,16 @@ function hGraphBuilder(dataset){
         .innerRadius(innerRadius)
         .outerRadius(outerRadius);
 
+
     var svg = d3.select("div#hGraph-container")
         .append("svg")
-        .attr("viewBox", "0 0 " + w + " " + h);
+        .attr("width", w)
+        .attr("height", h);
 
     var pieObjects = pie(dataset);
 
-    var hGraphWrapper = svg.append("g").attr("class", "hGraph-wrapper");
+    var hGraphWrapper = svg.append("g")
+        .attr("class", "hGraph-wrapper");
 
     var hGraph = hGraphWrapper.append("g").attr("class", "hGraph");
 
@@ -435,6 +435,7 @@ function hGraphBuilder(dataset){
             "fill": "#74c476",
             //"stroke": "#74c476",
             "stroke": "none",
+            "opacity": 0.4,
             "d": arc
         });
 
@@ -489,9 +490,10 @@ function hGraphBuilder(dataset){
             return d.join(" ");
         }).attr({
             "stroke": "#5b5b5b",
-            "stroke-width": 1,
+            "stroke-width": 1.75,
             "fill": "grey",
-            "fill-opacity": 0.35
+            "fill-opacity": 0.2,
+            "vector-effect": "non-scaling-stroke"
         });
 
     var hGraphMeasurementsGroup = hGraph.append("g").attr("class", "hGraphMeasurements");
@@ -534,8 +536,10 @@ function hGraphBuilder(dataset){
     // pointsGroup.attr("transform", scale + " " + rotate);
     // polygon.attr("transform", scale + " " + rotate);
     // move the hGraph
-    var translate = "translate(" + (w/2) + ", " + (h/2) + ")";
+    var translate = "translate(" + (w * 0.5) + ", " + (h * 0.5) + ")";
     hGraph.attr("transform", translate);
+
+
     // for further extension we return the hGraph instance
     return hGraph;
 }

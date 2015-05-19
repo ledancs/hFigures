@@ -57,7 +57,7 @@ GroupedAnimation.prototype.show = function(d3element){
 
 GroupedAnimation.prototype.dim = function(d3element){
     if(this.isVisible(d3element))
-        this.animateOpacity(d3element, 0.1);
+        this.animateOpacity(d3element, 0.3);
 };
 
 GroupedAnimation.prototype.hide = function(d3element){
@@ -65,7 +65,10 @@ GroupedAnimation.prototype.hide = function(d3element){
         this.animateOpacity(d3element, 0);
 };
 
-function hGraphPanZoomApp(hGraph){
+function hGraphPanZoomApp(hGraph, w, h){
+    var svg = d3.select("div#hGraph-container")
+        .select("svg");
+    svg.attr("viewBox", "" + 0 + " " + 0 + " " + w + " " + h);
     // show and hide
     var groupLabels = hGraph.select("g.labels").selectAll("g.groupLabel");
     groupLabels.selectAll("rect")

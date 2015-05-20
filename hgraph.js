@@ -386,7 +386,7 @@ LabelFixer.prototype.adjust = function (d3group){
     self.resetBorder();
 };
 
-function hGraphBuilder(dataset, w, h){
+function hGraphBuilder(dataset, w, h, className){
     var pie = d3.layout.pie().value(function (d) {
         return d.measurements.length;
     }).sort(null);
@@ -406,11 +406,12 @@ function hGraphBuilder(dataset, w, h){
         .innerRadius(innerRadius)
         .outerRadius(outerRadius);
 
-
-    var svg = d3.select("div#hGraph-container")
+    var svg = d3.select("body")
+        .append("div")
+            .attr("class", className)
         .append("svg")
-        .attr("width", w)
-        .attr("height", h);
+            .attr("width", w)
+            .attr("height", h);
 
     var pieObjects = pie(dataset);
 

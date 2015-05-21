@@ -15,6 +15,7 @@ function HealthGraph(groupedMeasurements, w, h, className){
     /**
      *
      * @param label
+     * @param text
      * @param fontSize
      * @param angle
      * @param r0
@@ -24,8 +25,9 @@ function HealthGraph(groupedMeasurements, w, h, className){
      * @param lineWidth
      * @constructor
      */
-    function LabelText(label, fontSize, angle, r0, r1, r, lineColor, lineWidth){
+    function LabelText(label, text, fontSize, angle, r0, r1, r, lineColor, lineWidth){
         this.label = label;
+        this.text = text;
         this.fontSize = fontSize;
         this.angle = angle;
         this.r0 = r0;
@@ -99,7 +101,7 @@ function HealthGraph(groupedMeasurements, w, h, className){
      */
     function addLabelText(labels){
         return labels.append("text")
-            .text(function(d) {return d.label;})
+            .text(function(d) {return d.text;})
             .attr("text-anchor", "middle")
             .attr("x", function(d){return Math.cos(d.angle) * d.r1;})
             .attr("y", function(d){return (Math.sin(d.angle) * d.r1 * -1);})
@@ -142,8 +144,8 @@ function HealthGraph(groupedMeasurements, w, h, className){
     function addFrameBox(labels){
         return labels.append("rect")
             .attr("x", function(d){return d.frameBox.x - 5;})
-            .attr("y", function (d) {return d.frameBox.y;})
-            .attr("height", function (d) {return d.frameBox.height;})
+            .attr("y", function (d) {return d.frameBox.y - 3;})
+            .attr("height", function (d) {return d.frameBox.height + 6;})
             .attr("width", function (d) {return d.frameBox.width + 10;})
             .attr({
                 "rx": 1,
@@ -530,7 +532,7 @@ function HealthGraph(groupedMeasurements, w, h, className){
             "fill": "#74c476",
             //"stroke": "#74c476",
             "stroke": "none",
-            "opacity": 0.4,
+            "opacity": 0.3,
             "d": arc
         })
         .each(function (d) {
@@ -547,7 +549,7 @@ function HealthGraph(groupedMeasurements, w, h, className){
         var pieData = pieAngleData[i];
         var angleCenter = getAngleCenter(pieData.startAngle, pieData.endAngle, pieData.padAngle);
 
-        labelData.push(new LabelText(group.label, groupLabelFontSize, angleCenter, outerRadius, labelRadius, 0, "#74c476", 2));
+        labelData.push(new LabelText(group.label, group.label, groupLabelFontSize, angleCenter, outerRadius, labelRadius, 0, "#74c476", 2));
 
         hGraphMs = hGraphMs.concat(
             buildMeasurements(ms, pieData.startAngle, pieData.padAngle, pieData.endAngle, innerRadius, outerRadius, measurementCircleRadius)
@@ -566,9 +568,9 @@ function HealthGraph(groupedMeasurements, w, h, className){
     // now the labels
     for(var i = 0; i < hGraphMs.length; i ++){
         var m = hGraphMs[i],
-            label = m.label + ": " + m.samples[m.sample].value + " " + m.units,
+            text = m.label + ": " + m.samples[m.sample].value + " " + m.units,
             r1 = Math.max(m.radius + 20, labelRadius);
-        labelData.push(new LabelText(label, measurementLabelFontSize, m.angle, m.radius, r1, measurementCircleRadius, "grey", 1));
+        labelData.push(new LabelText(m.label, text, measurementLabelFontSize, m.angle, m.radius, r1, measurementCircleRadius, "grey", 1));
     }
     var labelsG = hGraphD3Group.append("g").attr("class", "labels");
     var labels = labelsG.selectAll("g.label")
@@ -653,7 +655,38 @@ HealthGraph.prototype.renderPolygonAndCircles = function(){
         return [arr];
     }
 
-    var graphs = this.hGraphWrapper.select("g.hGraph").select("g.graphs");
+    /**
+     *
+     * @param label {string}
+     * @returns {D3._UpdateSelection}
+     */
+    function getLabelGroup(label){
+        return wrapper
+            .select("g.hGraph")
+            .select("g.labels")
+            .selectAll("g.measurementLabel")
+            .filter(function (d) {
+                return d.label == label;
+            });
+    }
+
+    /**
+     *
+     * @param label
+     * @returns {_UpdateSelection<any>}
+     */
+    function getCircleMeasurement(label){
+
+        return graphs
+            .selectAll("g.hGraphMeasurements circle")
+            .filter(function (d) {
+                if(d) return d.label == label;
+            return false;
+            });
+    }
+
+    var wrapper = this.hGraphWrapper;
+    var graphs = wrapper.select("g.hGraph").select("g.graphs");
     var graph = graphs.append("g")
         .attr("class", "graph");
     // add the polygon in a group
@@ -671,7 +704,7 @@ HealthGraph.prototype.renderPolygonAndCircles = function(){
             return d.join(" ");
         }).attr({
             "stroke": "#5b5b5b",
-            "stroke-width": 1.75,
+            "stroke-width": 1,
             "fill": "none",
             // "fill-opacity": 0.5,
             "vector-effect": "non-scaling-stroke"
@@ -691,6 +724,20 @@ HealthGraph.prototype.renderPolygonAndCircles = function(){
             "stroke": "#5b5b5b",
             "stroke-width": 1,
             "vector-effect": "non-scaling-stroke"
+        })
+        .on("mouseover", function(d) {
+            // d3.select(this).attr("stroke-width", 4); // redundant since now we are selecting all circles
+            var g = getLabelGroup(d.label);
+            g.select("line").attr("stroke-width", 3);
+            g.select("rect").attr("stroke-width", 3);
+            getCircleMeasurement(d.label).attr("stroke-width", 4);
+        })
+        .on("mouseout", function(d) {
+            // d3.select(this).attr("stroke-width", 1);
+            var g = getLabelGroup(d.label);
+            g.select("line").attr("stroke-width", 1);
+            g.select("rect").attr("stroke-width", 1);
+            getCircleMeasurement(d.label).attr("stroke-width", 1);
         });
     return graph;
 };

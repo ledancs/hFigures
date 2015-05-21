@@ -36,7 +36,8 @@ function d3zoom(w, h, hGraphInstance, className){
     var svg = d3.select("div." + className)
         .select("svg");
 
-    svg.attr("viewBox", "" + 0 + " " + 0 + " " + w + " " + h)
+    svg
+        //.attr("viewBox", "" + 0 + " " + 0 + " " + w + " " + h)
         .call(zoom);
 
     var hGraphWrapper = hGraphInstance.hGraphWrapper;

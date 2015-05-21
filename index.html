@@ -43,9 +43,6 @@
     var oldGraph = hGraphInstance.plotSamplesAt(0);
     oldGraph.attr("opacity", 0.4);
 
-    // now we can extend and manipulate the hGraph
-    // hGraphPanZoomApp(hGraph, w, h);
-
     // the className is needed to set the viewBox in the svg element inside the div container.
     d3zoom(w, h, hGraphInstance, className);
 

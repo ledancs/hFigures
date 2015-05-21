@@ -37,10 +37,12 @@
     var h = 600;
     var className = "hGraph-container";
 
-    var hGraph = hGraphBuilder(groups, w, h, className); // from data.js
+    var hGraphInstance = hGraphBuilder(groups, w, h, className); // from data.js
     // now we can extend and manipulate the hGraph
     // hGraphPanZoomApp(hGraph, w, h);
-    d3zoom(w, h, className);
+
+    // the className is needed to set the viewBox in the svg element inside the div container.
+    d3zoom(w, h, hGraphInstance, className);
 
 </script>
 

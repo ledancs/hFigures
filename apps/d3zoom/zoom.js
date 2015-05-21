@@ -3,7 +3,7 @@
  */
 
 // testing
-function d3zoom(w, h, className){
+function d3zoom(w, h, hGraphInstance, className){
     var prevScale = 1;
     var zoomedIn = false;
 
@@ -39,8 +39,8 @@ function d3zoom(w, h, className){
     svg.attr("viewBox", "" + 0 + " " + 0 + " " + w + " " + h)
         .call(zoom);
 
-    var hGraphWrapper = svg.select("g.hGraph-wrapper");
-    var groupLabels = hGraph.select("g.labels").selectAll("g.groupLabel");
+    var hGraphWrapper = hGraphInstance.hGraphWrapper;
+    var groupLabels = hGraphWrapper.select("g.labels").selectAll("g.groupLabel");
 
     groupLabels.selectAll("rect")
         .attr({
@@ -52,7 +52,7 @@ function d3zoom(w, h, className){
             "stroke-width": 1
         });
 
-    var measurementLabels = hGraph.select("g.labels").selectAll("g.measurementLabel");
+    var measurementLabels = hGraphWrapper.select("g.labels").selectAll("g.measurementLabel");
 
     // show and hide
     measurementLabels.attr("opacity", 0);

@@ -3,7 +3,7 @@
  */
 
 // testing
-function d3zoom(w, h){
+function d3zoom(w, h, className){
     var prevScale = 1;
     var zoomedIn = false;
 
@@ -33,7 +33,7 @@ function d3zoom(w, h){
         .scaleExtent([1, 3])
         .on("zoom", zoomed);
 
-    var svg = d3.select("div#hGraph-container")
+    var svg = d3.select("div." + className)
         .select("svg");
 
     svg.attr("viewBox", "" + 0 + " " + 0 + " " + w + " " + h)

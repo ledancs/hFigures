@@ -29,19 +29,20 @@
     </style>
 </head>
 <body>
-<div id="hGraph-container" class="hGraph-container"></div>
+
 <script src="hGraph.js" type="application/javascript"></script>
-<script src="apps/panZoom/pzlib.js" type="application/javascript"></script>
-<script src="apps/panZoom/hGraphPanZoomApp.js" type="application/javascript"></script>
 <script src="apps/d3zoom/zoom.js" type="application/javascript"></script>
 <script type="text/javascript">
     var w = 600;
     var h = 600;
-    var hGraph = hGraphBuilder(groups, w, h); // from data.js
+    var className = "hGraph-container";
+
+    var hGraph = hGraphBuilder(groups, w, h, className); // from data.js
     // now we can extend and manipulate the hGraph
     // hGraphPanZoomApp(hGraph, w, h);
-    d3zoom(w, h);
+    d3zoom(w, h, className);
 
 </script>
+
 </body>
 </html>

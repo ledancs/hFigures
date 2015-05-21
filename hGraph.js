@@ -3,14 +3,65 @@
  */
 
 /**
- * Build the hGraph and return an instance of it.
+ *
  * @param groupedMeasurements
  * @param w
  * @param h
  * @param className
- * @returns {HealthGraph}
+ * @constructor
  */
-function hGraphBuilder(groupedMeasurements, w, h, className){
+function HealthGraph(groupedMeasurements, w, h, className){
+
+    /**
+     *
+     * @param label
+     * @param fontSize
+     * @param angle
+     * @param r0
+     * @param r1
+     * @param r
+     * @param lineColor
+     * @param lineWidth
+     * @constructor
+     */
+    function LabelText(label, fontSize, angle, r0, r1, r, lineColor, lineWidth){
+        this.label = label;
+        this.fontSize = fontSize;
+        this.angle = angle;
+        this.r0 = r0;
+        this.r1 = r1;
+        this.r = r;
+        this.frameBox = null;
+        this.className = "";
+        this.lineColor = lineColor;
+        this.lineWidth = lineWidth;
+    }
+    /**
+     *
+     * @param x
+     * @param y
+     * @param width
+     * @param height
+     * @constructor
+     */
+    function LabelFrame(x, y, width, height){
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+    }
+
+    /**
+     *
+     * @param x
+     * @param y
+     * @constructor
+     */
+    function LabelOffset(x, y){
+        this.x = x;
+        this.y = y;
+    }
+
 
     /**
      *
@@ -26,7 +77,7 @@ function hGraphBuilder(groupedMeasurements, w, h, className){
         collisionFix(d2root, labels);
         // move the labels
         labels.attr("transform", function(d){
-            return "translate(" + d.xOffset + ", " + d.yOffset + ")";
+            return "translate(" + d.offset.x + ", " + d.offset.y + ")";
         });
         // append the line
         addLabelLines(labels);
@@ -109,9 +160,7 @@ function hGraphBuilder(groupedMeasurements, w, h, className){
                 d.frameBox = new LabelFrame(box.x, box.y, box.width, box.height);
                 var center = labelCentroid(d.frameBox, d.angle);
                 // add the offsets
-                d.xOffset = center.x;
-                // d.yOffset = center.y;
-                d.yOffset = 0;
+                d.offset = new LabelOffset(center.x, 0);
             });
     }
 
@@ -134,10 +183,10 @@ function hGraphBuilder(groupedMeasurements, w, h, className){
                 // return Math.sin(d.angle) > 0 ? d.frameBox.y + d.frameBox.height: d.frameBox.y;
             })
             .attr("x2", function (d) {
-                return Math.cos(d.angle) * (d.r0 + d.r) - d.xOffset;
+                return Math.cos(d.angle) * (d.r0 + d.r) - d.offset.x;
             })
             .attr("y2", function (d) {
-                return (Math.sin(d.angle) * (d.r0 + d.r) * - 1) - d.yOffset;
+                return (Math.sin(d.angle) * (d.r0 + d.r) * - 1) - d.offset.y;
             })
             .attr({
                 "vector-effect": "non-scaling-stroke"
@@ -249,14 +298,14 @@ function hGraphBuilder(groupedMeasurements, w, h, className){
     }
 
     /*
-    function angle(startAngle, endAngle) {
-        var centroidAngle = (startAngle + endAngle)/2;
-        // Math.PI (rad) = 180 (deg)
-        // centroidAngle (rad) = x (deg)
-        // return a > 90 ? a - 180 : a;
-        return (centroidAngle * 180) / Math.PI;
-    }
-    */
+     function angle(startAngle, endAngle) {
+     var centroidAngle = (startAngle + endAngle)/2;
+     // Math.PI (rad) = 180 (deg)
+     // centroidAngle (rad) = x (deg)
+     // return a > 90 ? a - 180 : a;
+     return (centroidAngle * 180) / Math.PI;
+     }
+     */
 
     /**
      *
@@ -314,7 +363,7 @@ function hGraphBuilder(groupedMeasurements, w, h, className){
         this.min = measurement.min;
         this.max = measurement.max;
         this.samples = measurement.samples;
-        this.sample = 0;
+        this.sample = this.samples.length - 1;
         this.r0 = r0; // inner radius
         this.r1 = r1; // outer radius
         this.additionalRanges = false;
@@ -366,56 +415,6 @@ function hGraphBuilder(groupedMeasurements, w, h, className){
 
     HealthMeasurement.additionalRanges = ["yellow_min", "yellow_max", "red_min", "red_max"];
 
-    /**
-     * Builds a distance string for svg elements.
-     * @param healthMeasurements
-     * @returns {*[]}
-     */
-    function toDistanceString(healthMeasurements){
-        var arr = [];
-        for(var i = 0; i < healthMeasurements.length; i ++){
-            arr.push([healthMeasurements[i].x, healthMeasurements[i].y]);
-        }
-        return [arr];
-    }
-    /**
-     *
-     * @param label
-     * @param fontSize
-     * @param angle
-     * @param r0
-     * @param r1
-     * @param r
-     * @param lineColor
-     * @param lineWidth
-     * @constructor
-     */
-    function LabelText(label, fontSize, angle, r0, r1, r, lineColor, lineWidth){
-        this.label = label;
-        this.fontSize = fontSize;
-        this.angle = angle;
-        this.r0 = r0;
-        this.r1 = r1;
-        this.r = r;
-        this.frameBox = null;
-        this.className = "";
-        this.lineColor = lineColor;
-        this.lineWidth = lineWidth;
-    }
-    /**
-     *
-     * @param x
-     * @param y
-     * @param width
-     * @param height
-     * @constructor
-     */
-    function LabelFrame(x, y, width, height){
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-    }
 
     /**
      *
@@ -471,82 +470,14 @@ function hGraphBuilder(groupedMeasurements, w, h, className){
     LabelFixer.prototype.adjust = function (d3group){
         var self = this;
         d3group.each(function (d, i) {
-            d.yOffset = self.adjustLabel(i, d.angle, d.frameBox.y, d.frameBox.height, d.yOffset);
+            d.offset.y = self.adjustLabel(i, d.angle, d.frameBox.y, d.frameBox.height, d.offset.y);
         });
         self.resetBorder();
     };
 
-    /**
-     *
-     * @param hGraphWrapper {D3._Selection}
-     * @param measurements [HealthMeasurement]
-     * @constructor
-     */
-    function HealthGraph(hGraphWrapper, measurements){
 
-        this.hGraphWrapper = hGraphWrapper;
-        this.measurements = measurements;
-    }
-    /**
-     *
-     * @param index
-     */
-    HealthGraph.prototype.selectSample = function (index) {
-        var hgm, samples;
-        for(var i = 0; i < this.measurements.length; i ++){
-            hgm = this.measurements[i];
-            samples = hgm.samples;
-            hgm.sample = index < samples.length? index: samples.length - 1;
-            hgm.computePosition();
-        }
-    };
 
-    /**
-     * Render the polygon and the circles representing the measurements.
-     * @param d3target {D3._Selection}
-     * @param hGraphMeasurements []
-     * @returns {D3._Selection}
-     */
-    function renderPolygonAndCircles(d3target, hGraphMeasurements){
-        var graphGroup = d3target.append("g")
-            .attr("class", "graph");
-        // add the polygon in a group
-        graphGroup.append("g")
-            .attr("class", "polygon")
-            .selectAll("polygon")
-            .data(function () {
-                return [toDistanceString(hGraphMeasurements)];
-            })
-            .enter()
-            .append("polygon")
-            .attr("points", function(d) {
-                // compute the coordinates
-                return d.join(" ");
-            }).attr({
-                "stroke": "#5b5b5b",
-                "stroke-width": 1.75,
-                "fill": "none",
-                // "fill-opacity": 0.5,
-                "vector-effect": "non-scaling-stroke"
-            });
-        // add all the circles representing the measurements in a group
-        graphGroup.append("g")
-            .attr("class", "hGraphMeasurements")
-            .selectAll("circle")
-            .data(hGraphMeasurements)
-            .enter()
-            .append("circle")
-            .attr("r", function(d){return d.r;})
-            .attr("cx", function(d){return d.x;})
-            .attr("cy", function(d){return d.y;})
-            .attr("fill", function(d){return d.color;})
-            .attr({
-                "stroke": "#5b5b5b",
-                "stroke-width": 1,
-                "vector-effect": "non-scaling-stroke"
-            });
-        return graphGroup;
-    }
+
 
     // Here we begin to build the hGraph instance
     // all the functions used are inside this scope.
@@ -575,10 +506,10 @@ function hGraphBuilder(groupedMeasurements, w, h, className){
 
     var svg = d3.select("body")
         .append("div")
-            .attr("class", className)
+        .attr("class", className)
         .append("svg")
-            .attr("width", w)
-            .attr("height", h);
+        .attr("width", w)
+        .attr("height", h);
 
     var pieObjects = pie(inGroup); // build the pie chart using the number of measurements in each group
     var hGraphWrapper = svg.append("g") // needed for custom pan zoom library
@@ -608,7 +539,7 @@ function hGraphBuilder(groupedMeasurements, w, h, className){
                 padAngle: d.padAngle,
                 endAngle: d.endAngle
             })
-    });
+        });
 
     for(var i = 0; i < groupedMeasurements.length; i ++){
         var group = groupedMeasurements[i];
@@ -624,13 +555,15 @@ function hGraphBuilder(groupedMeasurements, w, h, className){
     }
 
 
-    // create the hGraph instance
-    var hGraphInstance = new HealthGraph(hGraphWrapper, hGraphMs);
-    renderPolygonAndCircles(hGraphD3Group, hGraphMs).attr("opacity", 0.4);
-    // change the value of the hGraph measurements
-    hGraphInstance.selectSample(1);
-    renderPolygonAndCircles(hGraphD3Group, hGraphMs);
+    // assign the values of the instance
+    this.hGraphWrapper = hGraphWrapper;
+    this.measurements = hGraphMs;
+    hGraphD3Group.append("g").attr("class", "graphs"); // a group to hold all the graphs
+    // render the polygon and the circles
+    this.graphs = [];
+    this.graphs.push(this.renderPolygonAndCircles());
 
+    // now the labels
     for(var i = 0; i < hGraphMs.length; i ++){
         var m = hGraphMs[i],
             label = m.label + ": " + m.samples[m.sample].value + " " + m.units,
@@ -663,7 +596,101 @@ function hGraphBuilder(groupedMeasurements, w, h, className){
     var translate = "translate(" + (w * 0.5) + ", " + (h * 0.5) + ")";
     hGraphD3Group.attr("transform", translate);
 
-
-    // for further extension we return the hGraph instance
-    return hGraphInstance;
 }
+
+/**
+ *
+ * @param index {number}
+ * @returns {D3._Selection}
+ */
+HealthGraph.prototype.plotSamplesAt = function(index){
+    this.selectSample(index);
+    var graph = this.renderPolygonAndCircles();
+    this.graphs.push(graph);
+    // make sure to have the last one at the bottom
+    // the newest is at the top
+    var g;
+    for(var i = this.graphs.length - 1; i > -1; i --){
+        g = this.graphs[i];
+        g.each(function(){
+            this.parentNode.appendChild(d3.select(this).node());
+        });
+    }
+
+    return graph;
+};
+
+/**
+ * Sets all the measurements to the selected index or the last one if not found.
+ * @param index
+ */
+HealthGraph.prototype.selectSample = function (index) {
+    var hgm, samples;
+    for(var i = 0; i < this.measurements.length; i ++){
+        hgm = this.measurements[i];
+        samples = hgm.samples;
+        hgm.sample = index < samples.length? index: samples.length - 1;
+        hgm.computePosition();
+    }
+};
+
+/**
+ * Render the polygon and the circles representing the measurements.
+ * @returns {D3._Selection}
+ */
+HealthGraph.prototype.renderPolygonAndCircles = function(){
+
+    /**
+     * Builds a distance string for svg elements.
+     * @param measurements [HealthMeasurement]
+     * @returns {*[]}
+     */
+    function toDistanceString(measurements){
+        var arr = [];
+        for(var i = 0; i < measurements.length; i ++){
+            arr.push([measurements[i].x, measurements[i].y]);
+        }
+        return [arr];
+    }
+
+    var graphs = this.hGraphWrapper.select("g.hGraph").select("g.graphs");
+    var graph = graphs.append("g")
+        .attr("class", "graph");
+    // add the polygon in a group
+    var distanceString = toDistanceString(this.measurements);
+    graph.append("g")
+        .attr("class", "polygon")
+        .selectAll("polygon")
+        .data(function () {
+            return [distanceString];
+        })
+        .enter()
+        .append("polygon")
+        .attr("points", function(d) {
+            // compute the coordinates
+            return d.join(" ");
+        }).attr({
+            "stroke": "#5b5b5b",
+            "stroke-width": 1.75,
+            "fill": "none",
+            // "fill-opacity": 0.5,
+            "vector-effect": "non-scaling-stroke"
+        });
+    // add all the circles representing the measurements in a group
+    graph.append("g")
+        .attr("class", "hGraphMeasurements")
+        .selectAll("circle")
+        .data(this.measurements)
+        .enter()
+        .append("circle")
+        .attr("r", function(d){return d.r;})
+        .attr("cx", function(d){return d.x;})
+        .attr("cy", function(d){return d.y;})
+        .attr("fill", function(d){return d.color;})
+        .attr({
+            "stroke": "#5b5b5b",
+            "stroke-width": 1,
+            "vector-effect": "non-scaling-stroke"
+        });
+    return graph;
+};

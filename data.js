@@ -19,7 +19,7 @@ var groups = [
                     },
                     {
                         timestamp: 1423742720,
-                        value: 133
+                        value: 128
                     }
                 ]
             },
@@ -39,7 +39,7 @@ var groups = [
                     },
                     {
                         timestamp: 1423742720,
-                        value: 92
+                        value: 86
                     }
                 ]
             }
@@ -60,7 +60,7 @@ var groups = [
                 samples: [
                     {
                         timestamp: 1420798224,
-                        value: 24
+                        value: 25
                     },
                     {
                         timestamp: 1423742720,
@@ -82,7 +82,7 @@ var groups = [
                     },
                     {
                         timestamp: 1423742720,
-                        value: 75.8
+                        value: 73.8
                     }
                 ]
             }
@@ -106,7 +106,7 @@ var groups = [
                     },
                     {
                         timestamp: 1423742720,
-                        value: 5013
+                        value: 8632
                     }
                 ]
             },
@@ -124,7 +124,7 @@ var groups = [
                     },
                     {
                         timestamp: 1423742720,
-                        value: 0
+                        value: 80
                     }
                 ]
             }
@@ -147,7 +147,7 @@ var groups = [
                     },
                     {
                         timestamp: 1423742720,
-                        value: 1.32
+                        value: 1.25
                     }
                 ]
             },
@@ -165,7 +165,7 @@ var groups = [
                     },
                     {
                         timestamp: 1423742720,
-                        value: 3.53
+                        value: 3.05
                     }
                 ]
             },
@@ -179,11 +179,11 @@ var groups = [
                 samples: [
                     {
                         timestamp: 1420798224,
-                        value: 1.55
+                        value: 2.3
                     },
                     {
                         timestamp: 1423742720,
-                        value: 1.62
+                        value: 1.45
                     }
                 ]
             }
@@ -209,7 +209,7 @@ var groups = [
                     },
                     {
                         timestamp: 1423742720,
-                        value: 7
+                        value: 7.5
                     }
                 ]
             },
@@ -223,11 +223,11 @@ var groups = [
                 samples: [
                     {
                         timestamp: 1420798224,
-                        value: 78
+                        value: 72
                     },
                     {
                         timestamp: 1423742720,
-                        value: 76
+                        value: 87
                     }
                 ]
             }

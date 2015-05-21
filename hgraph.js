@@ -386,6 +386,47 @@ LabelFixer.prototype.adjust = function (d3group){
     self.resetBorder();
 };
 
+function renderPolygonAndCircles(d3target, hGraphMeasurements){
+    var graph = d3target.append("g")
+        .attr("class", "graph");
+    // polygon
+    graph.append("g")
+        .attr("class", "polygon")
+        .selectAll("polygon")
+        .data(function () {
+            return [toDistanceString(hGraphMeasurements)];
+        })
+        .enter()
+        .append("polygon")
+        .attr("points", function(d) {
+            // compute the coordinates
+            return d.join(" ");
+        }).attr({
+            "stroke": "#5b5b5b",
+            "stroke-width": 1.75,
+            "fill": "none",
+            // "fill-opacity": 0.5,
+            "vector-effect": "non-scaling-stroke"
+        });
+    // circles
+    graph.append("g")
+        .attr("class", "hGraphMeasurements")
+        .selectAll("circle")
+        .data(hGraphMeasurements)
+        .enter()
+        .append("circle")
+        .attr("r", function(d){return d.r;})
+        .attr("cx", function(d){return d.x;})
+        .attr("cy", function(d){return d.y;})
+        .attr("fill", function(d){return d.color;})
+        .attr({
+            "stroke": "#5b5b5b",
+            "stroke-width": 1,
+            "vector-effect": "non-scaling-stroke"
+        });
+    return graph;
+}
+
 function hGraphBuilder(dataset, w, h){
     var pie = d3.layout.pie().value(function (d) {
         return d.measurements.length;
@@ -444,21 +485,20 @@ function hGraphBuilder(dataset, w, h){
             angle = getAngleAtSlice(d.startAngle, d.endAngle, d.padAngle, 2);
         dataByAngles.push(new LabelText(label, fontGroup, angle, outerRadius, labelRadius, 0, "#74c476", 2));
 
-        // experiment
         hGraphMeasurements = hGraphMeasurements.concat(
             hGraphMeasurementsBuilder(dataset[i], d.startAngle, d.padAngle, d.endAngle, innerRadius, outerRadius, circleRadius)
         );
     });
 
-    /*
-    var groupLabelsG = hGraph.append("g").attr("class", "groupLabels");
-    var groupLabels = groupLabelsG.selectAll("g.groupLabel")
-        .data(dataByAngles)
-        .enter()
-        .append("g")
-        .attr("class", "groupLabel");
-    buildLabels(groupLabelsG, groupLabels, w * 0.0275);
-    */
+    renderPolygonAndCircles(hGraph, hGraphMeasurements).attr("opacity", 0.4);
+    // change the value of the hGraph measurements
+    var hgm;
+    for(var i = 0; i < hGraphMeasurements.length; i ++){
+        hgm = hGraphMeasurements[i];
+        hgm.sample = hgm.samples.length - 1; // go to the last sample
+        hgm.computePosition();
+    }
+    renderPolygonAndCircles(hGraph, hGraphMeasurements);
 
     var labelData = [];
     for(var i = 0; i < hGraphMeasurements.length; i ++){
@@ -467,60 +507,15 @@ function hGraphBuilder(dataset, w, h){
             r1 = Math.max(m.radius + 20, labelRadius);
         labelData.push(new LabelText(label, fontMeasurement, m.angle, m.radius, r1, circleRadius, "grey", 1));
     }
-
+    labelData = labelData.concat(dataByAngles);
     var labelsG = hGraph.append("g").attr("class", "labels");
     var labels = labelsG.selectAll("g.label")
-        .data(labelData.concat(dataByAngles))
+        .data(labelData)
         .enter()
         .append("g")
         .attr("class", "label");
 
     buildLabels(labelsG, labels); // font-size: w * 0.0125
-
-    // polygon
-    var polygonGroup = hGraph.append("g").attr("class", "polygon");
-    polygonGroup.selectAll("polygon")
-        .data(function () {
-            return [toDistanceString(hGraphMeasurements)];
-        })
-        .enter()
-        .append("polygon")
-        .attr("points", function(d) {
-            // compute the coordinates
-            return d.join(" ");
-        }).attr({
-            "stroke": "#5b5b5b",
-            "stroke-width": 1.75,
-            "fill": "grey",
-            "fill-opacity": 0.2,
-            "vector-effect": "non-scaling-stroke"
-        });
-
-    var hGraphMeasurementsGroup = hGraph.append("g").attr("class", "hGraphMeasurements");
-    hGraphMeasurementsGroup.selectAll("circle")
-        .data(hGraphMeasurements)
-        .enter()
-        .append("circle")
-        .attr("r", function(d){return d.r;})
-        .attr("cx", function(d){return d.x;})
-        .attr("cy", function(d){return d.y;})
-        .attr("fill", function(d){return d.color;})
-        .attr({
-            "stroke": "#5b5b5b",
-            "stroke-width": 1,
-            "vector-effect": "non-scaling-stroke"
-        });
-
-    /*
-     var measurementLabelsG = hGraph.append("g").attr("class", "measurementLabels");
-     var measurementLabels = measurementLabelsG.selectAll("g.measurementLabels")
-     .data(labelData.concat(dataByAngles))
-     .enter()
-     .append("g")
-     .attr("class", "measurementLabels");
-     buildLabels(measurementLabels, labels); // font-size: w * 0.0125
-     */
-
     labels.attr("class", function (d) {
         return d.fontSize > fontMeasurement ? "groupLabel" : "measurementLabel";
     });

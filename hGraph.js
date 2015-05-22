@@ -143,10 +143,10 @@ function HealthGraph(groupedMeasurements, w, h, className){
      */
     function addFrameBox(labels){
         return labels.append("rect")
-            .attr("x", function(d){return d.frameBox.x - 5;})
-            .attr("y", function (d) {return d.frameBox.y - 3;})
-            .attr("height", function (d) {return d.frameBox.height + 6;})
-            .attr("width", function (d) {return d.frameBox.width + 10;})
+            .attr("x", function(d){return d.frameBox.x - 6;})
+            .attr("y", function (d) {return d.frameBox.y - 1;})
+            .attr("height", function (d) {return d.frameBox.height + 2;})
+            .attr("width", function (d) {return d.frameBox.width + 12;})
             .attr({
                 "rx": 1,
                 "ry": 1,
@@ -233,7 +233,7 @@ function HealthGraph(groupedMeasurements, w, h, className){
         }
 
         var angle = 0;
-        var lf = new LabelFixer(7, 0); // fix label overlapping
+        var lf = new LabelFixer(3, 0); // fix label overlapping
 
         labels.attr("class", function(d){
             // since we shift the angles as a clock
@@ -484,13 +484,13 @@ function HealthGraph(groupedMeasurements, w, h, className){
     // Here we begin to build the hGraph instance
     // all the functions used are inside this scope.
 
-    var outerRadius = w * 0.27;
-    var innerRadius = w * 0.18;
-    var labelRadius = w * 0.37;
+    var outerRadius = w * 0.20;
+    var innerRadius = w * 0.14;
+    var labelRadius = w * 0.25;
 
-    var groupLabelFontSize = 16;
+    var groupLabelFontSize = 12;
     var measurementLabelFontSize = 8;
-    var measurementCircleRadius = 5;
+    var measurementCircleRadius = 4;
 
     var arc = d3.svg.arc()
         .innerRadius(innerRadius)
@@ -673,7 +673,7 @@ HealthGraph.prototype.renderPolygonAndCircles = function(){
     /**
      *
      * @param label
-     * @returns {_UpdateSelection<any>}
+     * @returns {D3._UpdateSelection}
      */
     function getCircleMeasurement(label){
 
@@ -689,6 +689,7 @@ HealthGraph.prototype.renderPolygonAndCircles = function(){
     var graphs = wrapper.select("g.hGraph").select("g.graphs");
     var graph = graphs.append("g")
         .attr("class", "graph");
+
     // add the polygon in a group
     var distanceString = toDistanceString(this.measurements);
     graph.append("g")
@@ -709,6 +710,7 @@ HealthGraph.prototype.renderPolygonAndCircles = function(){
             // "fill-opacity": 0.5,
             "vector-effect": "non-scaling-stroke"
         });
+
     // add all the circles representing the measurements in a group
     graph.append("g")
         .attr("class", "hGraphMeasurements")

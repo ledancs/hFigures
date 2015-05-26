@@ -184,139 +184,6 @@ function HealthGraph(groupedMeasurements, w, h, className){
 
     /**
      *
-     * @param labelGroups {D3._Selection}
-     */
-    function buildLabels(labelGroups){
-        // add the text
-        var labelsText = addLabelText(labelGroups);
-        labelsText.each(function (d) {
-            var box = this.getBBox();
-            d.frameBox = {
-                x: box.x - 5,
-                y: box.y,
-                width: box.width + 10,
-                height: box.height
-            };
-            var center = labelCentroid(d.frameBox, d.angle);
-            // add the offsets
-            d.offset = {
-                x: center.x,
-                y: 0
-            };
-        });
-        // add the frame around
-        var labelsFrame = addFrameBox(labelGroups);
-        // fix the collisions
-        collisionFix(labelGroups);
-        // move the labels
-        labelGroups.attr("transform", function(d){
-            return "translate(" + d.offset.x + ", " + d.offset.y + ")";
-        });
-        // append the line
-        var lines = addLabelLines(labelGroups);
-        // move to lines to the front
-        lines.each(function(){
-            this.parentNode.appendChild(d3.select(this).node());
-        });
-        // then move to frames to the front
-        labelsFrame.each(function(){
-            this.parentNode.appendChild(d3.select(this).node());
-        });
-        // finally move the text to the front
-        labelsText.each(function(){
-            this.parentNode.appendChild(d3.select(this).node());
-        });
-
-    }
-
-    /**
-     *
-     * @param labels
-     * @returns
-     */
-    function addLabelText(labels){
-        return labels.append("text")
-            .text(function(d) {return d.text;})
-            .attr("text-anchor", "middle")
-            .attr("x", function(d){
-                return Math.cos(d.angle) * d.r1;
-            })
-            .attr("y", function(d){
-                return (Math.sin(d.angle) * d.r1 * -1);
-            })
-            .attr("font-size", function(d){
-                return d.fontSize;
-            });
-    }
-
-    /**
-     *
-     * @param labels {D3._Selection}
-     * @returns {D3._Selection}
-     */
-    function addFrameBox(labels){
-        return labels.append("rect")
-            .attr("x", function(d){
-                return d.frameBox.x;
-            })
-            .attr("y", function (d) {
-                return d.frameBox.y;
-            })
-            .attr("height", function (d) {
-                return d.frameBox.height;
-            })
-            .attr("width", function (d) {
-                return d.frameBox.width;
-            })
-            .attr({
-                "rx": 0.5,
-                "ry": 0.5,
-                // "fill": "#d5f5d5",
-                "fill": "white",
-                "vector-effect": "non-scaling-stroke"
-            })
-            .attr("stroke", function(d){
-                return d.lineColor;
-            })
-            .attr("stroke-width", function(d){
-                return d.lineWidth;
-            });
-    }
-
-    /**
-     *
-     * @param labels {D3._Selection}
-     * @returns {D3._Selection}
-     */
-    function addLabelLines(labels){
-        return labels.append("line")
-            .attr("x1", function (d) {
-                return Math.cos(d.angle) > 0 ? d.frameBox.x: d.frameBox.x + d.frameBox.width;
-            })
-            .attr("y1", function (d) {
-                if(d.angle > Math.PI / 2 - 1/3 * Math.PI || d.angle < Math.PI / 2 - Math.PI - 2/3 * Math.PI)
-                    return d.frameBox.y + d.frameBox.height;
-                if(d.angle < Math.PI / 2 - 2/3 * Math.PI && d.angle > Math.PI / 2 - Math.PI - 1/3 * Math.PI)
-                    return d.frameBox.y;
-                return d.frameBox.y + d.frameBox.height/2;
-                // return Math.sin(d.angle) > 0 ? d.frameBox.y + d.frameBox.height: d.frameBox.y;
-            })
-            .attr("x2", function (d) {
-                return Math.cos(d.angle) * (d.r0 + d.r) - d.offset.x;
-            })
-            .attr("y2", function (d) {
-                return (Math.sin(d.angle) * (d.r0 + d.r) * - 1) - d.offset.y;
-            })
-            .attr({
-                "vector-effect": "non-scaling-stroke"
-            })
-            .attr("stroke", function(d){ return d.lineColor; })
-            .attr("stroke-width", function(d){ return d.lineWidth; });
-        // .style("stroke-dasharray", ("1, 1"));
-    }
-
-    /**
-     *
      * @param measurements
      * @param startAngle
      * @param padAngle
@@ -573,14 +440,6 @@ function HealthGraph(groupedMeasurements, w, h, className){
     // assign the values of the instance
     this.hGraphWrapper = hGraphWrapper;
     this.measurements = hGraphMs;
-    hGraphD3Group.append("g").attr("class", "graphs"); // a group to hold all the graphs
-    // render the polygon and the circles
-    this.graphs = this.hGraphWrapper.select("g.hGraph").select("g.graphs");
-    var graph = this.renderPolygonAndCircles();
-    this.graphs.node().appendChild(graph.node());
-    var hCircles = graph.selectAll("circle");
-    this.mouseHighlight(hCircles);
-
     // now the labels
     for(var i = 0; i < hGraphMs.length; i ++){
         var m = hGraphMs[i],
@@ -607,15 +466,20 @@ function HealthGraph(groupedMeasurements, w, h, className){
     // an svg group containing all the labels
     this.labelGroupContainer = hGraphD3Group.append("g").attr("class", "labels");
     // append a group for each label containing the label, the frame and the line to the circle
-    this.labelGroups = this.labelGroupContainer.selectAll("g")
-        .data(labelData)
-        .enter()
-        .append("g");
-
     // call the function that build all the labels and adjusts for any collision
-    buildLabels(this.labelGroups);
-    this.mouseHighlight(this.labelGroups);
+    this.labelData = labelData;
+    var self = this;
+    this.mouseHighlight(self.plotLabels(labelData));
     this.labelRadius = labelRadius;
+
+    hGraphD3Group.append("g").attr("class", "graphs"); // a group to hold all the graphs
+    // render the polygon and the circles
+    this.graphs = this.hGraphWrapper.select("g.hGraph").select("g.graphs");
+    var graph = this.renderPolygonAndCircles();
+    this.graphs.node().appendChild(graph.node());
+    var hCircles = graph.selectAll("circle");
+    this.mouseHighlight(hCircles);
+    
     // flip the y axis
     // var scale = "scale(1, -1)";
     // rotate
@@ -632,118 +496,237 @@ function HealthGraph(groupedMeasurements, w, h, className){
 
 }
 
-HealthGraph.prototype.updateLabelPosition = function () {
-
-    var measurements = this.measurements;
-    var labelRadius = this.labelRadius;
-    var labelGroups = this.labelGroups;
-    var m, labelGroup;
-
-    for(var i = 0; i < measurements.length; i ++){
-        m = measurements[i];
-
-        labelGroup = labelGroups.filter(function (d) {
-                return d.label == m.label;
+HealthGraph.prototype.plotLabels = function(labelData){
+    /**
+     *
+     * @param labels
+     * @returns {D3._Selection<T>}
+     */
+    function addLabelText(labels){
+        return labels.append("text")
+            .text(function(d) {return d.text;})
+            .attr("text-anchor", "middle")
+            .attr("x", function(d){
+                return Math.cos(d.angle) * d.r1;
+            })
+            .attr("y", function(d){
+                return (Math.sin(d.angle) * d.r1 * -1);
+            })
+            .attr("font-size", function(d){
+                return d.fontSize;
+            })
+            .each(function(d){
+                var box = this.getBBox();
+                d.frameBox = {
+                    x: box.x - 5,
+                    y: box.y - 1,
+                    width: box.width + 10,
+                    height: box.height + 2
+                };
             });
-
-        labelGroup.each(function (d) {
-            d.text = m.label + ": " + m.samples[m.sample].value + " " + m.units;
-            d.r1 = Math.max(m.radius + 20, labelRadius);
-            d.r0 = m.radius;
-        });
     }
 
-    labelGroups.select("text")
-        .text(function (d) {
-            return d.text;
+    /**
+     *
+     * @param labels
+     * @returns {D3._Selection<T>}
+     */
+    function addFrameBox(labels){
+        return labels.append("rect")
+            .attr("x", function(d){
+                return d.frameBox.x;
+            })
+            .attr("y", function (d) {
+                return d.frameBox.y;
+            })
+            .attr("height", function (d) {
+                return d.frameBox.height;
+            })
+            .attr("width", function (d) {
+                return d.frameBox.width;
+            })
+            .attr({
+                "vector-effect": "non-scaling-stroke",
+                "rx": 0.5,
+                "ry": 0.5,
+                // "fill": "#d5f5d5",
+                "fill": "white",
+            })
+            .attr("stroke", function(d){
+                return d.lineColor;
+            })
+            .attr("stroke-width", 1)
+            .each(function(d){
+                var center = labelCentroid(d.frameBox, d.angle);
+                // add the offsets
+                d.offset = {
+                    x: center.x,
+                    y: 0
+                };
+            });
+    }
+
+    /**
+     *
+     * @param labels
+     * @returns {D3._Selection<T>}
+     */
+    function addLabelLines(labels){
+        var lines = labels.append("line");
+
+        lines.attr({
+            "vector-effect": "non-scaling-stroke",
+            "stroke-width": 1
         })
-        .attr("x", function(d){
-            return Math.cos(d.angle) * d.r1;
-        })
-        .attr("y", function(d){
-            return (Math.sin(d.angle) * d.r1 * -1);
-        }).each(function (d) {
-            var box = this.getBBox();
-            d.frameBox = {
-                x: box.x - 5,
-                y: box.y,
-                width: box.width + 10,
-                height: box.height
-            };
-            var center = labelCentroid(d.frameBox, d.angle);
-            // add the offsets
-            d.offset = {
-                x: center.x,
-                y: 0
-            };
+            .attr("stroke", function(d){
+                return d.lineColor;
+            })
+            .attr("x1", function (d) {
+                d.x1 = Math.cos(d.angle) > 0 ? d.frameBox.x: d.frameBox.x + d.frameBox.width;
+                return d.x1;
+            })
+            .attr("y1", function (d) {
+
+                d.y1 = d.frameBox.y + d.frameBox.height/2;
+
+                if(d.angle > Math.PI / 2 - 1/3 * Math.PI || d.angle < Math.PI / 2 - Math.PI - 2/3 * Math.PI)
+                    d.y1 = d.frameBox.y + d.frameBox.height;
+
+                if(d.angle < Math.PI / 2 - 2/3 * Math.PI && d.angle > Math.PI / 2 - Math.PI - 1/3 * Math.PI)
+                    d.y1 = d.frameBox.y;
+
+                return d.y1;
+            })
+            .attr("x2", function (d) {
+                return d.x1;
+            })
+            .attr("y2", function (d) {
+                return d.y1;
+            });
+
+        var groupLines = lines.filter(function (d) {
+            return d.className == "groupLabel";
         });
 
-    labelGroups.select("rect")
-        .attr("x", function(d){
-            return d.frameBox.x;
-        })
-        .attr("y", function (d) {
-            return d.frameBox.y;
-        })
-        .attr("height", function (d) {
-            return d.frameBox.height;
-        })
-        .attr("width", function (d) {
-            return d.frameBox.width;
+        groupLines
+            .attr("x2", function (d) {
+                return Math.cos(d.angle) * (d.r0 + d.r) - d.offset.x;
+            })
+            .attr("y2", function (d) {
+                return (Math.sin(d.angle) * (d.r0 + d.r) * - 1) - d.offset.y;
+            })
+            .attr("stroke-width", 2)
+            .attr("opacity", 0.3);
+
+        var measurementLines = lines.filter(function (d) {
+            return d.className == "measurementLabel";
         });
+
+        measurementLines.transition()
+            .attr("x2", function (d) {
+                return Math.cos(d.angle) * (d.r0 + d.r) - d.offset.x;
+            })
+            .attr("y2", function (d) {
+                return (Math.sin(d.angle) * (d.r0 + d.r) * - 1) - d.offset.y;
+            });
+
+        return lines;
+    }
+
+    var labelGroups = this.labelGroupContainer.selectAll("g")
+        .data(labelData)
+        .enter()
+        .append("g");
+
+    // add the text
+    var labelsText = addLabelText(labelGroups);
+
+    // add the frame around
+    var labelsFrame = addFrameBox(labelGroups);
 
     // fix the collisions
     collisionFix(labelGroups);
+
     // move the labels
-    labelGroups.transition()
-        .attr("transform", function(d){
-            return "translate(" + d.offset.x + ", " + d.offset.y + ")";
-        });
-    // fix the lines
-    labelGroups.selectAll("line")
-        .transition() // all we need for a smooth transition
-        .attr("x1", function (d) {
-            return Math.cos(d.angle) > 0 ?
-                d.frameBox.x: d.frameBox.x + d.frameBox.width;
-        })
-        .attr("y1", function (d) {
-            if(d.angle > Math.PI / 2 - 1/3 * Math.PI || d.angle < Math.PI / 2 - Math.PI - 2/3 * Math.PI)
-                return d.frameBox.y + d.frameBox.height;
-            if(d.angle < Math.PI / 2 - 2/3 * Math.PI && d.angle > Math.PI / 2 - Math.PI - 1/3 * Math.PI)
-                return d.frameBox.y;
-            return d.frameBox.y + d.frameBox.height/2;
-        })
-        .attr("x2", function (d) {
-            return Math.cos(d.angle) * (d.r0 + d.r) - d.offset.x;
-        })
-        .attr("y2", function (d) {
-            return (Math.sin(d.angle) * (d.r0 + d.r) * - 1) - d.offset.y;
-        })
+    labelGroups.attr("transform", function(d){
+        return "translate(" + d.offset.x + ", " + d.offset.y + ")";
+    });
+
+    // append the line
+    var lines = addLabelLines(labelGroups);
+
+    // move to lines to the front
+    lines.each(function(){
+        this.parentNode.appendChild(d3.select(this).node());
+    });
+
+    // then move to frames to the front
+    labelsFrame.each(function(){
+        this.parentNode.appendChild(d3.select(this).node());
+    });
+
+    // finally move the text to the front
+    labelsText.each(function(){
+        this.parentNode.appendChild(d3.select(this).node());
+    });
+
+    return labelGroups;
+};
+
+HealthGraph.prototype.updateLabelPosition = function () {
+
+    var measurements = this.measurements;
+
+    function getLabelDatum(label){
+        var datum;
+        for(var i = 0; i < labelData.length; i++){
+            datum = labelData[i];
+            if(datum.label === label){
+                return datum;
+            }
+        }
+        return null;
+    }
+
+    var labelRadius = this.labelRadius;
+    // save opacity properties for labels
+    var measurementLabelsOpacity = this.labelGroupContainer.selectAll("g.measurementLabel").attr("opacity");
+    var groupLabelsOpacity = this.labelGroupContainer.selectAll("g.groupLabel").attr("opacity");
+
+    this.labelGroupContainer.selectAll("g").remove();
+    var labelData = this.labelData;
+
+    var m, d;
+
+    for(var i = 0; i < measurements.length; i ++){
+        m = measurements[i];
+        d = getLabelDatum(m.label);
+
+        d.text = m.label + ": " + m.samples[m.sample].value + " " + m.units;
+        d.r1 = Math.max(m.radius + 20, labelRadius);
+        d.r0 = m.radius;
+    }
+
+    var self = this;
+    this.mouseHighlight(self.plotLabels(labelData));
+
+    this.labelGroupContainer.selectAll("g.measurementLabel").attr("opacity", measurementLabelsOpacity);
+    this.labelGroupContainer.selectAll("g.groupLabel").attr("opacity", groupLabelsOpacity);
+
 };
 
 /**
  *
- * @param index {number}
- * @returns {D3._Selection}
+ * @param index
  */
 HealthGraph.prototype.plotSamplesAt = function(index){
 
-    if(this.measurements[0].sample == index)
-        return this.graphs.selectAll("g.graph");
-
+    var graph = this.graphs.select("g.graph");
     this.selectSample(index);
+    this.updatePolygonAndCircles(graph);
     this.updateLabelPosition();
-
-    var graphs = this.graphs;
-    graphs.selectAll("g.graph").remove();
-
-    var graph = this.renderPolygonAndCircles();
-    graphs.node().appendChild(graph.node());
-
-    var hCircles = graph.selectAll("circle");
-    this.mouseHighlight(hCircles);
-
-    return graph;
+    var graphContainerDOM = this.graphs.node();
+    graphContainerDOM.parentNode.appendChild(graphContainerDOM);
 };
 
 HealthGraph.prototype.interpolateSamplesAt = function(index){
@@ -885,6 +868,44 @@ HealthGraph.prototype.renderPolygonAndCircles = function(){
     return graph;
 };
 
+HealthGraph.prototype.updatePolygonAndCircles = function(graph){
+    // add the polygon in a group
+    var distanceString = this.toDistanceString(this.measurements);
+    var measurements = this.measurements;
+    graph.selectAll("polygon")
+        .data(function () {
+            return [distanceString];
+        })
+        .transition()
+        .attr("points", function(d) {
+            // compute the coordinates
+            return d.join(" ");
+        });
+
+    // add all the circles representing the measurements in a group
+    graph.selectAll("circle")
+        .data(measurements)
+        .transition()
+        .attr("r", function(d){
+            return d.r;
+        })
+        .attr("cx", function(d){
+            return d.x;
+        })
+        .attr("cy", function(d){
+            return d.y;
+        })
+        .attr("fill", function(d){
+            return d.color;
+        })
+        .attr({
+            "stroke": "#5b5b5b",
+            "stroke-width": 1,
+            "vector-effect": "non-scaling-stroke"
+        });
+    return graph;
+};
+
 /**
  *
  * @param {D3._Selection<U>} d3Selection
@@ -896,7 +917,7 @@ HealthGraph.prototype.mouseHighlight = function (d3Selection) {
         var g = self.getLabelGroup(d.label);
         g.select("line").attr("stroke-width", 3);
         g.select("rect").attr("stroke-width", 3);
-        self.getCircleMeasurement(d.label).attr("stroke-width", 4);
+        self.getCircleMeasurement(d.label).attr("stroke-width", 3);
     }).on("mouseout", function(d) {
         // d3.select(this).attr("stroke-width", 1);
       var g = self.getLabelGroup(d.label);

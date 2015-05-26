@@ -17,7 +17,7 @@ function d3zoom(w, h, hGraphInstance, className){
 
     function toggle(){
         zoomedIn = !zoomedIn;
-        groupLabels.attr("opacity", zoomedIn ? 0.2: 1);
+        groupLabels.attr("opacity", zoomedIn ? 0.35: 1);
         measurementLabels.attr("opacity", zoomedIn ? 1: 0);
     }
 

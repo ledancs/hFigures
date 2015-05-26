@@ -125,8 +125,8 @@ function collisionFix(labels){
  * @returns {{x: number, y: number}}
  */
 function labelCentroid(box, angle){
-    var w = box.width * 1.065;
-    var h = box.height * 1.065;
+    var w = box.width;
+    var h = box.height;
 
     var cos = Math.cos(angle);
     var sin = Math.sin(angle);
@@ -189,6 +189,21 @@ function HealthGraph(groupedMeasurements, w, h, className){
     function buildLabels(labelGroups){
         // add the text
         var labelsText = addLabelText(labelGroups);
+        labelsText.each(function (d) {
+            var box = this.getBBox();
+            d.frameBox = {
+                x: box.x - 5,
+                y: box.y,
+                width: box.width + 10,
+                height: box.height
+            };
+            var center = labelCentroid(d.frameBox, d.angle);
+            // add the offsets
+            d.offset = {
+                x: center.x,
+                y: 0
+            };
+        });
         // add the frame around
         var labelsFrame = addFrameBox(labelGroups);
         // fix the collisions
@@ -223,19 +238,14 @@ function HealthGraph(groupedMeasurements, w, h, className){
         return labels.append("text")
             .text(function(d) {return d.text;})
             .attr("text-anchor", "middle")
-            .attr("x", function(d){return Math.cos(d.angle) * d.r1;})
-            .attr("y", function(d){return (Math.sin(d.angle) * d.r1 * -1);})
+            .attr("x", function(d){
+                return Math.cos(d.angle) * d.r1;
+            })
+            .attr("y", function(d){
+                return (Math.sin(d.angle) * d.r1 * -1);
+            })
             .attr("font-size", function(d){
                 return d.fontSize;
-            })
-            .each(function (d) {
-                var box = this.getBBox();
-                d.frameBox = {
-                    x: box.x,
-                    y: box.y,
-                    width: box.width,
-                    height: box.height
-                };
             });
     }
 
@@ -246,10 +256,18 @@ function HealthGraph(groupedMeasurements, w, h, className){
      */
     function addFrameBox(labels){
         return labels.append("rect")
-            .attr("x", function(d){return d.frameBox.x - 6;})
-            .attr("y", function (d) {return d.frameBox.y - 1;})
-            .attr("height", function (d) {return d.frameBox.height + 1;})
-            .attr("width", function (d) {return d.frameBox.width + 12;})
+            .attr("x", function(d){
+                return d.frameBox.x;
+            })
+            .attr("y", function (d) {
+                return d.frameBox.y;
+            })
+            .attr("height", function (d) {
+                return d.frameBox.height;
+            })
+            .attr("width", function (d) {
+                return d.frameBox.width;
+            })
             .attr({
                 "rx": 0.5,
                 "ry": 0.5,
@@ -257,23 +275,11 @@ function HealthGraph(groupedMeasurements, w, h, className){
                 "fill": "white",
                 "vector-effect": "non-scaling-stroke"
             })
-            .attr("stroke", function(d){ return d.lineColor; })
-            .attr("stroke-width", function(d){ return d.lineWidth; })
-            .each(function (d) {
-                var box = this.getBBox();
-                // override the frame box
-                d.frameBox = {
-                    x: box.x,
-                    y: box.y,
-                    width: box.width,
-                    height: box.height
-                };
-                var center = labelCentroid(d.frameBox, d.angle);
-                // add the offsets
-                d.offset = {
-                    x: center.x,
-                    y: 0
-                };
+            .attr("stroke", function(d){
+                return d.lineColor;
+            })
+            .attr("stroke-width", function(d){
+                return d.lineWidth;
             });
     }
 
@@ -645,64 +651,57 @@ HealthGraph.prototype.updateLabelPosition = function () {
             d.r1 = Math.max(m.radius + 20, labelRadius);
             d.r0 = m.radius;
         });
+    }
 
-        labelGroups.select("text")
-            .text(function (d) {
-                return d.text;
-            })
-            .attr("x", function(d){
-                return Math.cos(d.angle) * d.r1;
-            })
-            .attr("y", function(d){
-                return (Math.sin(d.angle) * d.r1 * -1);
-            }).each(function (d) {
-                var box = this.getBBox();
-                d.frameBox = {
-                    x: box.x,
-                    y: box.y,
-                    width: box.width,
-                    height: box.height
-                };
+    labelGroups.select("text")
+        .text(function (d) {
+            return d.text;
+        })
+        .attr("x", function(d){
+            return Math.cos(d.angle) * d.r1;
+        })
+        .attr("y", function(d){
+            return (Math.sin(d.angle) * d.r1 * -1);
+        }).each(function (d) {
+            var box = this.getBBox();
+            d.frameBox = {
+                x: box.x - 5,
+                y: box.y,
+                width: box.width + 10,
+                height: box.height
+            };
+            var center = labelCentroid(d.frameBox, d.angle);
+            // add the offsets
+            d.offset = {
+                x: center.x,
+                y: 0
+            };
         });
 
-        labelGroups.select("rect")
-            .attr("x", function(d){
-                return d.frameBox.x - 6;
-            })
-            .attr("y", function (d) {
-                return d.frameBox.y - 1;
-            })
-            .attr("height", function (d) {
-                return d.frameBox.height + 1;
-            })
-            .attr("width", function (d) {
-                return d.frameBox.width + 12;
-            }).each(function (d) {
-                var box = this.getBBox();
-                // override the frame box
-                d.frameBox = {
-                    x: box.x,
-                    y: box.y,
-                    width: box.width,
-                    height: box.height
-                };
-                var center = labelCentroid(d.frameBox, d.angle);
-                // reset
-                d.offset = {
-                    x: center.x,
-                    y: 0
-                }
-            });
-    }
+    labelGroups.select("rect")
+        .attr("x", function(d){
+            return d.frameBox.x;
+        })
+        .attr("y", function (d) {
+            return d.frameBox.y;
+        })
+        .attr("height", function (d) {
+            return d.frameBox.height;
+        })
+        .attr("width", function (d) {
+            return d.frameBox.width;
+        });
 
     // fix the collisions
     collisionFix(labelGroups);
     // move the labels
-    labelGroups.attr("transform", function(d){
-        return "translate(" + d.offset.x + ", " + d.offset.y + ")";
-    });
+    labelGroups.transition()
+        .attr("transform", function(d){
+            return "translate(" + d.offset.x + ", " + d.offset.y + ")";
+        });
     // fix the lines
     labelGroups.selectAll("line")
+        .transition() // all we need for a smooth transition
         .attr("x1", function (d) {
             return Math.cos(d.angle) > 0 ?
                 d.frameBox.x: d.frameBox.x + d.frameBox.width;
@@ -728,6 +727,10 @@ HealthGraph.prototype.updateLabelPosition = function () {
  * @returns {D3._Selection}
  */
 HealthGraph.prototype.plotSamplesAt = function(index){
+
+    if(this.measurements[0].sample == index)
+        return this.graphs.selectAll("g.graph");
+
     this.selectSample(index);
     this.updateLabelPosition();
 
@@ -862,10 +865,18 @@ HealthGraph.prototype.renderPolygonAndCircles = function(){
         .data(measurements)
         .enter()
         .append("circle")
-        .attr("r", function(d){return d.r;})
-        .attr("cx", function(d){return d.x;})
-        .attr("cy", function(d){return d.y;})
-        .attr("fill", function(d){return d.color;})
+        .attr("r", function(d){
+            return d.r;
+        })
+        .attr("cx", function(d){
+            return d.x;
+        })
+        .attr("cy", function(d){
+            return d.y;
+        })
+        .attr("fill", function(d){
+            return d.color;
+        })
         .attr({
             "stroke": "#5b5b5b",
             "stroke-width": 1,

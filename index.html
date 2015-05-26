@@ -50,8 +50,11 @@
     var hGraphInstance = new HealthGraph(groups, w, h, className); // from data.js
 
     // render again with the new values
-    var oldGraph = hGraphInstance.plotSamplesAt(0);
+    
+    var oldGraph = hGraphInstance.interpolateSamplesAt(0);
     oldGraph.attr("opacity", 0.4);
+
+    // hGraphInstance.plotSamplesAt(0);
 
     // the className is needed to set the viewBox in the svg element inside the div container.
     d3zoom(w, h, hGraphInstance, className);

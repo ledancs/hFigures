@@ -2,144 +2,6 @@
  * Created by andres on 4/23/15.
  */
 
-/**
- *
- * @param margin
- * @param border
- * @constructor
- */
-function LabelFixer(margin, border){
-    this.margin = margin;
-    this.border = border;
-}
-
-/**
- * Adjusts the y coordinate to avoid overlapping for a set of measurements in a quadrant.
- * @param i
- * @param angle
- * @param y
- * @param height
- * @param yOffset
- * @returns {number|*}
- */
-LabelFixer.prototype.adjustLabel = function (i, angle, y, height, yOffset){
-    var delta = i === 0 ? this.margin: 0,
-        upper = Math.sin(angle) >= 0;
-
-    var collision = upper ?
-        y + height + this.margin >= this.border :
-        y <= this.border;
-
-    if(collision && i > 0)
-        delta = upper ?
-            this.border - y - height - this.margin : // negative to move it up
-            this.border - y; // positive to move it down
-
-    yOffset += delta;
-
-    this.border = upper ?
-        y + delta :
-        y + height + this.margin + delta; // add the height and the margin plus possible delta
-
-    return yOffset;
-};
-/**
- * Resets the border before the next calculation begins.
- */
-LabelFixer.prototype.resetBorder = function () {
-    this.border = 0;
-};
-
-/**
- * Runs the collision detection for each element in the d3 group
- * @param d3group {D3._Selection}
- */
-LabelFixer.prototype.adjust = function (d3group){
-    var self = this;
-    d3group.each(function (d, i) {
-        d.offset.y = self.adjustLabel(i, d.angle, d.frameBox.y, d.frameBox.height, d.offset.y);
-    });
-    self.resetBorder();
-};
-
-/**
- *
- * @param labels {D3._Selection}
- */
-function collisionFix(labels){
-
-    function ascending(a, b){
-        return a.angle - b.angle;
-    }
-
-    function descending(a, b){
-        return b.angle - a.angle;
-    }
-
-    function between(x, min, max) {
-        return x >= min && x <= max;
-    }
-
-    /**
-     * Uses the angle to give the selection a class for later filtering.
-     * @param angle
-     * @returns {*}
-     */
-    function getQuadrant(angle){
-        if(between(angle, 0, Math.PI/2))
-            return "q1";
-        if(between(angle, Math.PI/2, Math.PI))
-            return "q4";
-        if(between(angle, Math.PI, 3/2*Math.PI))
-            return "q3";
-        return "q4";
-    }
-
-    var angle = 0;
-    var lf = new LabelFixer(5, 0); // fix label overlapping
-
-    var groupRoot = d3.select(".labels");
-
-    labels.attr("class", function(d){
-        // since we shift the angles as a clock
-        // 12 o'clock we begin
-        // from there it is clockwise
-        // so 1st quadrant begins from 12 o'clock
-        // then quadrant 4rd, 3rd and we end in the 2nd.
-        angle = Math.PI / 2 - d.angle;
-        return getQuadrant(angle);
-    });
-    // collisions
-    lf.adjust(groupRoot.selectAll("g.q1").sort(ascending));
-    lf.adjust(groupRoot.selectAll("g.q3").sort(ascending));
-    lf.adjust(groupRoot.selectAll("g.q2").sort(descending));
-    lf.adjust(groupRoot.selectAll("g.q4").sort(descending));
-    // restore the class of the selection
-    labels.attr("class", function(d){ return d.className; }); // reset the style
-}
-
-/**
- *
- * @param box
- * @param angle
- * @returns {{x: number, y: number}}
- */
-function labelCentroid(box, angle){
-    var w = box.width;
-    var h = box.height;
-
-    var cos = Math.cos(angle);
-    var sin = Math.sin(angle);
-
-    w *= cos > 0 ? 1: -1;
-    h *= sin > 0 ? -1: 1;
-
-    return {
-        x: w/2,
-        y: h/2
-    };
-}
-
 
 /**
  *
@@ -339,8 +201,8 @@ function HealthGraph(groupedMeasurements, w, h, className){
     // Here we begin to build the hGraph instance
     // all the functions used are inside this scope.
 
-    var outerRadius = w * 0.20;
-    var innerRadius = w * 0.14;
+    var outerRadius = w * 0.22;
+    var innerRadius = w * 0.15;
     var labelRadius = w * 0.25;
 
     var groupLabelFontSize = 12;
@@ -479,7 +341,7 @@ function HealthGraph(groupedMeasurements, w, h, className){
     this.graphs.node().appendChild(graph.node());
     var hCircles = graph.selectAll("circle");
     this.mouseHighlight(hCircles);
-    
+
     // flip the y axis
     // var scale = "scale(1, -1)";
     // rotate
@@ -496,14 +358,186 @@ function HealthGraph(groupedMeasurements, w, h, className){
 
 }
 
+/**
+ *
+ * @param labelData
+ * @returns {D3._Selection<U>}
+ */
 HealthGraph.prototype.plotLabels = function(labelData){
+
+    /**
+     *
+     * @param labels {D3._Selection}
+     */
+    function collisionFix(labels){
+
+        /**
+         *
+         * @param margin
+         * @param border
+         * @constructor
+         */
+        function LabelFixer(margin, border){
+            this.margin = margin;
+            this.border = border;
+        }
+
+        /**
+         * Adjusts the y coordinate to avoid overlapping for a set of measurements in a quadrant.
+         * @param i
+         * @param angle
+         * @param y
+         * @param height
+         * @param yOffset
+         * @returns {number|*}
+         */
+        LabelFixer.prototype.adjustLabel = function (i, angle, y, height, yOffset){
+            var delta = i === 0 ? this.margin: 0,
+                upper = Math.sin(angle) >= 0;
+
+            var collision = upper ?
+            y + height + this.margin >= this.border :
+            y <= this.border;
+
+            if(collision && i > 0)
+                delta = upper ?
+                this.border - y - height - this.margin : // negative to move it up
+                this.border - y; // positive to move it down
+
+            yOffset += delta;
+
+            this.border = upper ?
+            y + delta :
+            y + height + this.margin + delta; // add the height and the margin plus possible delta
+
+            return yOffset;
+        };
+
+
+        /**
+         *
+         * @param a
+         * @param b
+         * @returns {number}
+         */
+        function ascending(a, b){
+            return a.angle - b.angle;
+        }
+
+        /**
+         *
+         * @param a
+         * @param b
+         * @returns {number}
+         */
+        function descending(a, b){
+            return b.angle - a.angle;
+        }
+
+        /**
+         *
+         * @param x
+         * @param min
+         * @param max
+         * @returns {boolean}
+         */
+        function between(x, min, max) {
+            return x >= min && x <= max;
+        }
+
+        /**
+         * Uses the angle to give the selection a class for later filtering.
+         * @param angle
+         * @returns {*}
+         */
+        function getQuadrant(angle){
+            if(between(angle, 0, Math.PI/2))
+                return "q1";
+            if(between(angle, Math.PI/2, Math.PI))
+                return "q4";
+            if(between(angle, Math.PI, 3/2*Math.PI))
+                return "q3";
+            return "q4";
+        }
+
+        var angle = 0;
+        var lf = new LabelFixer(5, 0); // fix label overlapping
+
+        var groupRoot = d3.select(".labels");
+
+        labels.attr("class", function(d){
+            // since we shift the angles as a clock
+            // 12 o'clock we begin
+            // from there it is clockwise
+            // so 1st quadrant begins from 12 o'clock
+            // then quadrant 4rd, 3rd and we end in the 2nd.
+            angle = Math.PI / 2 - d.angle;
+            return getQuadrant(angle);
+        });
+
+        // collisions
+        groupRoot.selectAll("g.q1")
+            .sort(ascending)
+            .each(function (d, i) {
+                d.offset.y = lf.adjustLabel(i, d.angle, d.frameBox.y, d.frameBox.height, d.offset.y);
+            });
+        lf.border = 0;
+
+        groupRoot.selectAll("g.q3")
+            .sort(ascending)
+            .each(function (d, i) {
+                d.offset.y = lf.adjustLabel(i, d.angle, d.frameBox.y, d.frameBox.height, d.offset.y);
+            });
+        lf.border = 0;
+
+        groupRoot.selectAll("g.q2")
+            .sort(descending)
+            .each(function (d, i) {
+                d.offset.y = lf.adjustLabel(i, d.angle, d.frameBox.y, d.frameBox.height, d.offset.y);
+            });
+        lf.border = 0;
+
+        groupRoot.selectAll("g.q4")
+            .sort(descending)
+            .each(function (d, i) {
+                d.offset.y = lf.adjustLabel(i, d.angle, d.frameBox.y, d.frameBox.height, d.offset.y);
+            });
+        lf.border = 0;
+
+        // restore the class of the selection
+        labels.attr("class", function(d){ return d.className; }); // reset the style
+    }
+
+    /**
+     *
+     * @param box
+     * @param angle
+     * @returns {{x: number, y: number}}
+     */
+    function labelCentroid(box, angle){
+        var w = box.width;
+        var h = box.height;
+
+        var cos = Math.cos(angle);
+        var sin = Math.sin(angle);
+
+        w *= cos > 0 ? 1: -1;
+        h *= sin > 0 ? -1: 1;
+
+        return {
+            x: w/2,
+            y: h/2
+        };
+    }
+
+
     /**
      *
      * @param labels
      * @returns {D3._Selection<T>}
      */
     function addLabelText(labels){
-        return labels.append("text")
+        var textElements = labels.append("text")
             .text(function(d) {return d.text;})
             .attr("text-anchor", "middle")
             .attr("x", function(d){
@@ -514,8 +548,8 @@ HealthGraph.prototype.plotLabels = function(labelData){
             })
             .attr("font-size", function(d){
                 return d.fontSize;
-            })
-            .each(function(d){
+            });
+        textElements.each(function(d){
                 var box = this.getBBox();
                 d.frameBox = {
                     x: box.x - 5,
@@ -524,6 +558,7 @@ HealthGraph.prototype.plotLabels = function(labelData){
                     height: box.height + 2
                 };
             });
+        return textElements;
     }
 
     /**
@@ -550,7 +585,7 @@ HealthGraph.prototype.plotLabels = function(labelData){
                 "rx": 0.5,
                 "ry": 0.5,
                 // "fill": "#d5f5d5",
-                "fill": "white",
+                "fill": "white"
             })
             .attr("stroke", function(d){
                 return d.lineColor;
@@ -673,6 +708,10 @@ HealthGraph.prototype.plotLabels = function(labelData){
     return labelGroups;
 };
 
+/**
+ * Update the labels by changing the data value and then removing them from the plot
+ * in order to plot them again
+ */
 HealthGraph.prototype.updateLabelPosition = function () {
 
     var measurements = this.measurements;
@@ -709,14 +748,14 @@ HealthGraph.prototype.updateLabelPosition = function () {
 
     var self = this;
     this.mouseHighlight(self.plotLabels(labelData));
-
+    // set the opacity to the previous value
     this.labelGroupContainer.selectAll("g.measurementLabel").attr("opacity", measurementLabelsOpacity);
     this.labelGroupContainer.selectAll("g.groupLabel").attr("opacity", groupLabelsOpacity);
 
 };
 
 /**
- *
+ * Select a sample to plot
  * @param index
  */
 HealthGraph.prototype.plotSamplesAt = function(index){
@@ -729,6 +768,11 @@ HealthGraph.prototype.plotSamplesAt = function(index){
     graphContainerDOM.parentNode.appendChild(graphContainerDOM);
 };
 
+/**
+ * Plot an additional sample in the background
+ * @param index
+ * @returns {D3._Selection}
+ */
 HealthGraph.prototype.interpolateSamplesAt = function(index){
     var originalSample = this.measurements[0].sample;
 
@@ -867,7 +911,11 @@ HealthGraph.prototype.renderPolygonAndCircles = function(){
         });
     return graph;
 };
-
+/**
+ *
+ * @param graph
+ * @returns {*}
+ */
 HealthGraph.prototype.updatePolygonAndCircles = function(graph){
     // add the polygon in a group
     var distanceString = this.toDistanceString(this.measurements);

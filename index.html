@@ -50,14 +50,11 @@
     var hGraphInstance = new HealthGraph(groups, w, h, className); // from data.js
 
     // render again with the new values
-    /*
-    var oldGraph = hGraphInstance.interpolateSamplesAt(0);
-    oldGraph.attr("opacity", 0.4);
-    */
 
+    // var oldGraph = hGraphInstance.interpolateSamplesAt(0);
+    // oldGraph.attr("opacity", 0.4);
 
-
-
+    
     document.addEventListener("keydown", keyDownTextField, false);
     function keyDownTextField(e) {
         var keyCode = e.keyCode;
@@ -72,7 +69,7 @@
                 break;
         }
     }
-
+    
 
     // hGraphInstance.plotSamplesAt(0);
 

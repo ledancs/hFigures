@@ -552,10 +552,10 @@ HealthGraph.prototype.plotLabels = function(labelData){
         textElements.each(function(d){
                 var box = this.getBBox();
                 d.frameBox = {
-                    x: box.x - 5,
-                    y: box.y - 1,
-                    width: box.width + 10,
-                    height: box.height + 2
+                    x: box.x - 10,
+                    y: box.y - 2,
+                    width: box.width + 20,
+                    height: box.height + 4
                 };
             });
         return textElements;
@@ -965,12 +965,21 @@ HealthGraph.prototype.mouseHighlight = function (d3Selection) {
         var g = self.getLabelGroup(d.label);
         g.select("line").attr("stroke-width", 3);
         g.select("rect").attr("stroke-width", 3);
-        self.getCircleMeasurement(d.label).attr("stroke-width", 3);
+        g.select("text").attr("font-size", 8.5);
+
+        var c = self.getCircleMeasurement(d.label);
+        c.attr("stroke-width", 3);
+        c.attr("r", 6);
     }).on("mouseout", function(d) {
         // d3.select(this).attr("stroke-width", 1);
-      var g = self.getLabelGroup(d.label);
+        var g = self.getLabelGroup(d.label);
         g.select("line").attr("stroke-width", 1);
         g.select("rect").attr("stroke-width", 1);
-        self.getCircleMeasurement(d.label).attr("stroke-width", 1);
+        g.select("rect").attr("r", 4);
+        g.select("text").attr("font-size", 8);
+
+        var c = self.getCircleMeasurement(d.label);
+        c.attr("stroke-width", 1);
+        c.attr("r", 4);
     });
 };

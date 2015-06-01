@@ -552,9 +552,9 @@ HealthGraph.prototype.plotLabels = function(labelData){
         textElements.each(function(d){
                 var box = this.getBBox();
                 d.frameBox = {
-                    x: box.x - 10,
+                    x: box.x - 15,
                     y: box.y - 2,
-                    width: box.width + 20,
+                    width: box.width + 30,
                     height: box.height + 4
                 };
             });

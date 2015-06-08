@@ -3,7 +3,7 @@
  */
 
 // testing
-function d3zoom(w, h, hGraphInstance, className){
+function d3zoom(className){
     var prevScale = 1;
     var zoomedIn = false;
 

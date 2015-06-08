@@ -201,9 +201,11 @@ function HealthGraph(groupedMeasurements, w, h, className){
     // Here we begin to build the hGraph instance
     // all the functions used are inside this scope.
 
-    var outerRadius = w * 0.22;
-    var innerRadius = w * 0.15;
-    var labelRadius = w * 0.25;
+    // TODO: adjust depending on the number of measurements along with the zoom and font size
+
+    var outerRadius = w * 0.55;
+    var innerRadius = w * 0.45;
+    var labelRadius = w * 0.65;
 
     var groupLabelFontSize = 12;
     var measurementLabelFontSize = 8;
@@ -552,10 +554,18 @@ HealthGraph.prototype.plotLabels = function(labelData){
         textElements.each(function(d){
                 var box = this.getBBox();
                 d.frameBox = {
-                    x: box.x - 15,
+                    x: box.x - 10,
                     y: box.y - 2,
-                    width: box.width + 30,
+                    width: box.width + 20,
                     height: box.height + 4
+                };
+            })
+            .each(function(d){
+                var center = labelCentroid(d.frameBox, d.angle);
+                // add the offsets
+                d.offset = {
+                    x: center.x,
+                    y: 0
                 };
             });
         return textElements;
@@ -590,15 +600,7 @@ HealthGraph.prototype.plotLabels = function(labelData){
             .attr("stroke", function(d){
                 return d.lineColor;
             })
-            .attr("stroke-width", 1)
-            .each(function(d){
-                var center = labelCentroid(d.frameBox, d.angle);
-                // add the offsets
-                d.offset = {
-                    x: center.x,
-                    y: 0
-                };
-            });
+            .attr("stroke-width", 1);
     }
 
     /**
@@ -965,7 +967,7 @@ HealthGraph.prototype.mouseHighlight = function (d3Selection) {
         var g = self.getLabelGroup(d.label);
         g.select("line").attr("stroke-width", 3);
         g.select("rect").attr("stroke-width", 3);
-        g.select("text").attr("font-size", 8.5);
+        // g.select("text").attr("font-size", 8.5);
 
         var c = self.getCircleMeasurement(d.label);
         c.attr("stroke-width", 3);
@@ -976,7 +978,7 @@ HealthGraph.prototype.mouseHighlight = function (d3Selection) {
         g.select("line").attr("stroke-width", 1);
         g.select("rect").attr("stroke-width", 1);
         g.select("rect").attr("r", 4);
-        g.select("text").attr("font-size", 8);
+        // g.select("text").attr("font-size", 8);
 
         var c = self.getCircleMeasurement(d.label);
         c.attr("stroke-width", 1);

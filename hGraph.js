@@ -204,7 +204,7 @@ function HealthGraph(groupedMeasurements, w, h, className){
     // TODO: adjust depending on the number of measurements along with the zoom and font size
 
     // Other options
-    var outerRadius = w * 0.55;
+    var outerRadius = w * 0.55; // check a scale function from d3
     var innerRadius = w * 0.45;
     var labelRadius = w * 0.65;
 

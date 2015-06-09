@@ -750,7 +750,7 @@ HealthGraph.prototype.updateLabelPosition = function () {
         d = getLabelDatum(m.label);
 
         d.text = m.label + ": " + m.samples[m.sample].value + " " + m.units;
-        d.r1 = Math.max(m.radius + 20, labelRadius);
+        d.r1 = Math.max(m.radius + 20, labelRadius); // TODO: extend this to the label creation
         d.r0 = m.radius;
     }
 

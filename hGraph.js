@@ -62,7 +62,7 @@ function HealthGraph(groupedMeasurements, w, h, className){
         var hGraphM = null;
         for(var i = 0; i < measurements.length; i ++){
             dataM = measurements[i];
-            angle = startAngle + padAngle + ((i + 1) * angleDelta);
+            angle = startAngle + (i * angleDelta) + (angleDelta / 2);
             // move the result so it goes clockwise
             angle = Math.PI / 2 - angle;
             hGraphM = new HealthMeasurement(dataM, angle, innerRadius, outerRadius, measurementCircleRadius);
@@ -108,11 +108,11 @@ function HealthGraph(groupedMeasurements, w, h, className){
      * @returns {number}
      */
     function getAngleDelta(startAngle, padAngle, endAngle, n) {
-        var start = startAngle + padAngle/2;
-        var end = endAngle - padAngle/2;
+        var start = startAngle;
+        var end = endAngle;
 
         var space = end - start;
-        return space / (n + 1);
+        return space / n ;
     }
 
 
@@ -204,9 +204,9 @@ function HealthGraph(groupedMeasurements, w, h, className){
     // TODO: adjust depending on the number of measurements along with the zoom and font size
 
     // Other options
-    var outerRadius = w * 0.55; // check a scale function from d3
-    var innerRadius = w * 0.45;
-    var labelRadius = w * 0.65;
+    var outerRadius = w * 0.4; // check a scale function from d3
+    var innerRadius = w * 0.3;
+    var labelRadius = w * 0.45;
 
     var groupLabelFontSize = 12;
     var measurementLabelFontSize = 8;
@@ -610,12 +610,17 @@ HealthGraph.prototype.plotLabels = function(labelData){
      * @returns {D3._Selection<T>}
      */
     function addLabelLines(labels){
-        var lines = labels.append("line");
+        var lines;
+        var groupLines;
+        var measurementLines;
+
+        lines = labels.append("line");
 
         lines.attr({
             "vector-effect": "non-scaling-stroke",
-            "stroke-width": 1
-        })
+            "stroke-width": 1,
+            "stroke-dasharray": "10, 5"
+            })
             .attr("stroke", function(d){
                 return d.lineColor;
             })
@@ -642,7 +647,7 @@ HealthGraph.prototype.plotLabels = function(labelData){
                 return d.y1;
             });
 
-        var groupLines = lines.filter(function (d) {
+        groupLines = lines.filter(function (d) {
             return d.className == "groupLabel";
         });
 
@@ -656,7 +661,7 @@ HealthGraph.prototype.plotLabels = function(labelData){
             .attr("stroke-width", 2)
             .attr("opacity", 0.3);
 
-        var measurementLines = lines.filter(function (d) {
+        measurementLines = lines.filter(function (d) {
             return d.className == "measurementLabel";
         });
 
@@ -884,8 +889,8 @@ HealthGraph.prototype.renderPolygonAndCircles = function(){
         }).attr({
             "stroke": "#5b5b5b",
             "stroke-width": 1,
-            "fill": "none",
-            // "fill-opacity": 0.5,
+            "fill": "grey",
+            "fill-opacity": 0.15,
             "vector-effect": "non-scaling-stroke"
         });
     // add all the circles representing the measurements in a group
@@ -964,16 +969,26 @@ HealthGraph.prototype.updatePolygonAndCircles = function(graph){
 HealthGraph.prototype.mouseHighlight = function (d3Selection) {
     var self = this;
     d3Selection.on("mouseover", function(d) {
+
+
+
         // d3.select(this).attr("stroke-width", 4); // redundant since now we are selecting all circles
         var g = self.getLabelGroup(d.label);
         g.select("line").attr("stroke-width", 3);
         g.select("rect").attr("stroke-width", 3);
+
+        // console.log(d3.select(this).selectAll("text"));
+
         // g.select("text").attr("font-size", 8.5);
+
+        d3.select(this).selectAll("text")
 
         var c = self.getCircleMeasurement(d.label);
         c.attr("stroke-width", 3);
         c.attr("r", 6);
+
     }).on("mouseout", function(d) {
+
         // d3.select(this).attr("stroke-width", 1);
         var g = self.getLabelGroup(d.label);
         g.select("line").attr("stroke-width", 1);
@@ -981,8 +996,10 @@ HealthGraph.prototype.mouseHighlight = function (d3Selection) {
         g.select("rect").attr("r", 4);
         // g.select("text").attr("font-size", 8);
 
+
         var c = self.getCircleMeasurement(d.label);
         c.attr("stroke-width", 1);
         c.attr("r", 4);
+
     });
 };

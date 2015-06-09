@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <title></title>
     <script charset="utf-8" src="d3.min.js"></script>
-    <script charset="utf-8" src="data.js"></script>
+    <script charset="utf-8" src="dataPatientDiabetes.js"></script>
     <style type="text/css">
         body {
             font-family: sans-serif;
@@ -43,16 +43,16 @@
 <script src="hGraph.js" type="application/javascript"></script>
 <script src="apps/d3zoom/zoom.js" type="application/javascript"></script>
 <script type="text/javascript">
-    var w = 600;
-    var h = 600;
+    var w = 800;
+    var h = 800;
     var className = "hGraph-container";
 
     var hGraphInstance = new HealthGraph(groups, w, h, className); // from data.js
 
     // render again with the new values
 
-    var oldGraph = hGraphInstance.interpolateSamplesAt(1);
-    oldGraph.attr("opacity", 0.4);
+    //var oldGraph = hGraphInstance.interpolateSamplesAt(0);
+    //oldGraph.attr("opacity", 0.55);
 
     
     document.addEventListener("keydown", keyDownTextField, false);

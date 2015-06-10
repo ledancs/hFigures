@@ -5,6 +5,105 @@
 
 /**
  *
+ * @param measurement
+ * @param angle
+ * @param r0
+ * @param r1
+ * @param r
+ * @constructor
+ */
+function HealthMeasurement(measurement, angle, r0, r1, r){
+
+    this.label = measurement.label;
+    this.r = r; // this is the radius of the svg circle element
+    this.units = measurement.units;
+    this.angle = angle;
+    // recommended minimum and maximum (mandatory)
+    this.min = measurement.min;
+    this.max = measurement.max;
+
+    // the array of samples
+    this.samples = measurement.samples;
+
+    // the selected sample
+    // this.sample = this.samples.length - 1;
+    this.sample = 0;
+
+    // the hGraph minimum and maximum radii
+    this.r0 = r0; // inner radius
+    this.r1 = r1; // outer radius
+
+    // by default we have no additional ranges
+    this.additionalRanges = false;
+
+    // compute the scale
+    this.scale = d3.scale.linear()
+        .domain([measurement.min, measurement.max])
+        .range([r0, r1]);
+
+
+    // initially the radius of the circle, as well as the x and y points are set to zero
+    this.x = this.y = this.radius = 0;
+
+    // the color by default is white
+    this.color = "white";
+
+    // check for yellow and red ranges
+    var ranges = HealthMeasurement.additionalRanges; // shorthand
+
+    // add additional ranges when needed
+    for(var i = 0; i < ranges.length; i++){
+        if (typeof measurement[ranges[i]] != 'undefined'){
+            this.additionalRanges = true;
+            this[ranges[i]] = measurement[ranges[i]];
+        }
+    }
+
+    // compute the position and color
+    // that is the radius, x and y values
+    this.calculatePosition();
+}
+/**
+ * Computes the position and sets the x, y and radius based on the selected sample.
+ */
+HealthMeasurement.prototype.calculatePosition = function () {
+    var sample; // the selected sample
+    var value; // the value of the selected sample
+
+    sample = this.samples[this.sample];
+    value = sample.value;
+
+    this.radius = this.scale(value);
+    this.x = Math.cos(this.angle) * this.radius;
+    this.y = Math.sin(this.angle) * this.radius * -1;
+
+    this.color = this.additionalRanges ? "#73D651": "white";
+
+    if(this["yellow_max"] && value >= this.max){
+        this.color = "gold";
+    }
+    if(this["red_max"] && value >= this["red_max"]){
+        this.color = "tomato";
+    }
+
+    if(this["yellow_min"] && value <= this.min){
+        this.color = "gold";
+    }
+    if(this["red_min"] && value <= this["red_min"]){
+        this.color = "tomato";
+    }
+
+};
+
+/**
+ * The types of ranges
+ * @type {string[]}
+ */
+HealthMeasurement.additionalRanges = ["yellow_min", "yellow_max", "red_min", "red_max"];
+
+
+/**
+ *
  * @param groupedMeasurements
  * @param w
  * @param h
@@ -128,75 +227,6 @@ function HealthGraph(groupedMeasurements, w, h, className){
     // each circle computes: radius, x, y, color
     // functions: first, last, next, previous, goto(timestamp)
 
-    /**
-     *
-     * @param measurement
-     * @param angle
-     * @param r0
-     * @param r1
-     * @param r
-     * @constructor
-     */
-    function HealthMeasurement(measurement, angle, r0, r1, r){
-
-        this.label = measurement.label;
-        this.r = r; // this is the radius of the svg circle element
-        this.units = measurement.units;
-        this.angle = angle;
-        this.min = measurement.min;
-        this.max = measurement.max;
-        this.samples = measurement.samples;
-        this.sample = this.samples.length - 1;
-        this.r0 = r0; // inner radius
-        this.r1 = r1; // outer radius
-        this.additionalRanges = false;
-
-        this.scale = d3.scale.linear()
-            .domain([this.min, this.max])
-            .range([this.r0, this.r1]);
-
-        this.x = this.y = this.radius = 0;
-        this.color = "white";
-        // check for yellow and red ranges
-        var ranges = HealthMeasurement.additionalRanges; // shorthand
-        for(var i = 0; i < ranges.length; i++){
-            if (typeof measurement[ranges[i]] != 'undefined'){
-                this.additionalRanges = true;
-                this[ranges[i]] = measurement[ranges[i]];
-            }
-        }
-        // compute the position and color
-        this.computePosition();
-    }
-    /**
-     * Computes the position and sets the x, y and radius based on the selected sample.
-     */
-    HealthMeasurement.prototype.computePosition = function () {
-        var sample = this.samples[this.sample];
-        var value = sample.value;
-        this.radius = this.scale(value);
-        this.x = Math.cos(this.angle) * this.radius;
-        this.y = Math.sin(this.angle) * this.radius * -1;
-
-        this.color = this.additionalRanges ? "#73D651": "white";
-
-        if(this["yellow_max"] && value >= this.max){
-            this.color = "gold";
-        }
-        if(this["red_max"] && value >= this["red_max"]){
-            this.color = "tomato";
-        }
-
-        if(this["yellow_min"] && value <= this.min){
-            this.color = "gold";
-        }
-        if(this["red_min"] && value <= this["red_min"]){
-            this.color = "tomato";
-        }
-
-    };
-
-    HealthMeasurement.additionalRanges = ["yellow_min", "yellow_max", "red_min", "red_max"];
 
     // Here we begin to build the hGraph instance
     // all the functions used are inside this scope.
@@ -266,6 +296,7 @@ function HealthGraph(groupedMeasurements, w, h, className){
     /**
      * Creating the view models
      */
+    var groupHealthMeasurementLabel;
     for(var i = 0; i < groupedMeasurements.length; i ++){
         var group = groupedMeasurements[i];
         var ms = group.measurements;
@@ -274,21 +305,23 @@ function HealthGraph(groupedMeasurements, w, h, className){
 
         /**
          * Labels for the groups of measurements
+         * @type {{label: *, text: *, fontSize: number, angle: number, r0: number, r1: number, r: number, lineColor: string, lineWidth: number, className: string}}
          */
-        labelData.push(
-            new LabelText(
-                group.label,
-                group.label,
-                groupLabelFontSize,
-                angleCenter,
-                outerRadius,
-                labelRadius,
-                0,
-                "#74c476",
-                2,
-                "groupLabel"
-            )
-        );
+        groupHealthMeasurementLabel = {
+            "label": group.label,
+            "text": group.label,
+            "fontSize": groupLabelFontSize,
+            "angle": angleCenter,
+            "r0": outerRadius,
+            "r1": labelRadius,
+            "r": 0,
+            "lineColor": "#74c476",
+            "lineWidth": 3,
+            "className": "groupLabel"
+        };
+
+        // push it to the array of health measurement labels
+        labelData.push(groupHealthMeasurementLabel);
 
         /**
          * Health measurements
@@ -306,27 +339,28 @@ function HealthGraph(groupedMeasurements, w, h, className){
     this.hGraphWrapper = hGraphWrapper;
     this.measurements = hGraphMs;
     // now the labels
+    var healthMeasurementLabel;
+
     for(var i = 0; i < hGraphMs.length; i ++){
         var m = hGraphMs[i],
             text = m.label + ": " + m.samples[m.sample].value + " " + m.units,
             r1 = Math.max(m.radius + 20, labelRadius);
-        /**
-         * Labels for the individual measurements
-         */
-        labelData.push(
-            new LabelText(
-                m.label,
-                text,
-                measurementLabelFontSize,
-                m.angle,
-                m.radius,
-                r1,
-                measurementCircleRadius,
-                "#5b5b5b",
-                1,
-                "measurementLabel"
-            )
-        );
+
+        healthMeasurementLabel = {
+            "label": m.label,
+            "text": text,
+            "fontSize": measurementLabelFontSize,
+            "angle": m.angle,
+            "r0": m.radius,
+            "r1": r1,
+            "r": measurementCircleRadius,
+            "lineColor": "#5b5b5b",
+            "lineWidth": 1,
+            "className": "measurementLabel"
+        };
+
+        // push it to the array of health measurement labels
+        labelData.push(healthMeasurementLabel);
     }
     // an svg group containing all the labels
     this.labelGroupContainer = hGraphD3Group.append("g").attr("class", "labels");
@@ -340,7 +374,9 @@ function HealthGraph(groupedMeasurements, w, h, className){
     hGraphD3Group.append("g").attr("class", "graphs"); // a group to hold all the graphs
     // render the polygon and the circles
     this.graphs = this.hGraphWrapper.select("g.hGraph").select("g.graphs");
-    var graph = this.renderPolygonAndCircles();
+
+    var graph = this.renderPolygonAndCircles(hGraphMs);
+
     this.graphs.node().appendChild(graph.node());
     var hCircles = graph.selectAll("circle");
     this.mouseHighlight(hCircles);
@@ -743,16 +779,44 @@ HealthGraph.prototype.updateLabelPosition = function () {
     this.labelGroupContainer.selectAll("g").remove();
     var labelData = this.labelData;
 
-    var m, d;
+    var measurement, datum;
+    var circles;
+    var maxRadiusForGroupLabels = 0;
 
     for(var i = 0; i < measurements.length; i ++){
-        m = measurements[i];
-        d = getLabelDatum(m.label);
+        measurement = measurements[i];
+        datum = getLabelDatum(measurement.label);
 
-        d.text = m.label + ": " + m.samples[m.sample].value + " " + m.units;
-        d.r1 = Math.max(m.radius + 20, labelRadius); // TODO: extend this to the label creation
-        d.r0 = m.radius;
+        datum.text = measurement.label + ": " + measurement.samples[measurement.sample].value + " " + measurement.units;
+
+        // get all the radii from the circles associated to this measurement
+        circles = this.getCircleMeasurement(measurement.label);
+
+        circles.each(function (d) {
+
+            // console.log(d.radius);
+
+            datum.r1 = Math.max(d.radius + 30, labelRadius);
+
+            maxRadiusForGroupLabels = Math.max(datum.r1, maxRadiusForGroupLabels);
+
+        });
+
+
+        // datum.r1 = Math.max(measurement.radius + 20, labelRadius); // TODO: extend this to the label creation
+        // datum.r0 = measurement.radius;
     }
+
+    // adjust group labels as well
+    this.labelGroupContainer
+        .selectAll("g.groupLabel")
+        .each(function (d) {
+
+            // TODO: Find why the hell I am not getting the max radius
+
+            d.r1 = maxRadiusForGroupLabels + 20;
+
+        });
 
     var self = this;
     this.mouseHighlight(self.plotLabels(labelData));
@@ -782,44 +846,60 @@ HealthGraph.prototype.plotSamplesAt = function(index){
  * @returns {D3._Selection}
  */
 HealthGraph.prototype.interpolateSamplesAt = function(index){
-    var originalSample = this.measurements[0].sample;
+    // var originalSample;
+    var hGraphMeasurements;
+    var graphs;
+    var d3Selection;
+    var recentlyAddedGraph;
+    var hCircles;
 
-    this.selectSample(index);
+    // originalSample = this.measurements[0].sample;
+    hGraphMeasurements = this.selectSample(index);
 
-    var graphs = this.graphs;
-    var d3Selection = graphs.selectAll("g.graph");
+    graphs = this.graphs;
+    d3Selection = graphs.selectAll("g.graph");
 
-    var graph = this.renderPolygonAndCircles();
+    recentlyAddedGraph = this.renderPolygonAndCircles(hGraphMeasurements);
 
-    graphs.node().appendChild(graph.node());
-
+    graphs.node().appendChild(recentlyAddedGraph.node());
+    // move the previously existing graphs to the front
     d3Selection.each(function (d) {
         this.parentNode.appendChild(d3.select(this).node());
     });
 
-    var hCircles = graph.selectAll("circle");
+    hCircles = recentlyAddedGraph.selectAll("circle");
 
     this.mouseHighlight(hCircles);
 
+    this.updateLabelPosition();
+
     // restore the original sample
+    // this.selectSample(originalSample);
 
-    this.selectSample(originalSample);
-
-    return graph;
+    return recentlyAddedGraph;
 };
+
+
 
 /**
  * Sets all the measurements to the selected index or the last one if not found.
  * @param index
+ * @returns {Array}
  */
 HealthGraph.prototype.selectSample = function (index) {
-    var hgm, samples;
+    var hGraphMeasurement;
+    var samples;
+    var hGraphMeasurements = [];
+
     for(var i = 0; i < this.measurements.length; i ++){
-        hgm = this.measurements[i];
-        samples = hgm.samples;
-        hgm.sample = index < samples.length? index: samples.length - 1;
-        hgm.computePosition();
+        hGraphMeasurement = this.measurements[i];
+        samples = hGraphMeasurement.samples;
+        hGraphMeasurement.sample = index < samples.length? index: samples.length - 1;
+        hGraphMeasurement.calculatePosition();
+        hGraphMeasurements.push(hGraphMeasurement);
     }
+
+    return hGraphMeasurements;
 };
 
 
@@ -865,16 +945,24 @@ HealthGraph.prototype.getCircleMeasurement = function(label){
         });
 };
 
+
 /**
  * Render the polygon and the circles representing the measurements.
- * @returns {D3._Selection}
+ * @param measurementDataModels
+ * @returns {D3._Selection<T>|*}
  */
-HealthGraph.prototype.renderPolygonAndCircles = function(){
-    var graph = this.svg.append("g")
+HealthGraph.prototype.renderPolygonAndCircles = function(measurementDataModels){
+    var graph;
+    var distanceString;
+
+
+    graph = this.svg.append("g")
         .attr("class", "graph");
+
     // add the polygon in a group
-    var distanceString = this.toDistanceString(this.measurements);
-    var measurements = this.measurements;
+    distanceString = this.toDistanceString(measurementDataModels);
+
+    // create group and add polygon
     graph.append("g")
         .attr("class", "polygon")
         .selectAll("polygon")
@@ -889,15 +977,16 @@ HealthGraph.prototype.renderPolygonAndCircles = function(){
         }).attr({
             "stroke": "#5b5b5b",
             "stroke-width": 1,
-            "fill": "grey",
-            "fill-opacity": 0.15,
+            "fill": "none",
+            // "fill-opacity": 0.15,
             "vector-effect": "non-scaling-stroke"
         });
+
     // add all the circles representing the measurements in a group
     graph.append("g")
         .attr("class", "hGraphMeasurements")
         .selectAll("circle")
-        .data(measurements)
+        .data(measurementDataModels)
         .enter()
         .append("circle")
         .attr("r", function(d){
@@ -917,6 +1006,8 @@ HealthGraph.prototype.renderPolygonAndCircles = function(){
             "stroke-width": 1,
             "vector-effect": "non-scaling-stroke"
         });
+
+    // return the graph group containing the circles and the polygon
     return graph;
 };
 /**
@@ -925,9 +1016,14 @@ HealthGraph.prototype.renderPolygonAndCircles = function(){
  * @returns {*}
  */
 HealthGraph.prototype.updatePolygonAndCircles = function(graph){
-    // add the polygon in a group
-    var distanceString = this.toDistanceString(this.measurements);
-    var measurements = this.measurements;
+
+    var distanceString;
+    var measurements;
+
+
+    distanceString = this.toDistanceString(this.measurements);
+    measurements = this.measurements;
+
     graph.selectAll("polygon")
         .data(function () {
             return [distanceString];
@@ -938,7 +1034,7 @@ HealthGraph.prototype.updatePolygonAndCircles = function(graph){
             return d.join(" ");
         });
 
-    // add all the circles representing the measurements in a group
+
     graph.selectAll("circle")
         .data(measurements)
         .transition()
@@ -959,6 +1055,7 @@ HealthGraph.prototype.updatePolygonAndCircles = function(graph){
             "stroke-width": 1,
             "vector-effect": "non-scaling-stroke"
         });
+
     return graph;
 };
 

@@ -17,7 +17,7 @@ function d3zoom(className){
 
     function toggle(){
         zoomedIn = !zoomedIn;
-        labelGroupContainer.selectAll("g.groupLabel").attr("opacity", zoomedIn ? 0.35: 1);
+        labelGroupContainer.selectAll("g.groupLabel").attr("opacity", zoomedIn ? 0.5: 1);
         labelGroupContainer.selectAll("g.measurementLabel").attr("opacity", zoomedIn ? 1: 0);
     }
 

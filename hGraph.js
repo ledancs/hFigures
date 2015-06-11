@@ -101,6 +101,24 @@ HealthMeasurement.prototype.calculatePosition = function () {
 };
 
 /**
+ *
+ * @param startAngle
+ * @param endAngle
+ * @param padAngle
+ * @returns {number}
+ */
+function getAngleCenter(startAngle, endAngle, padAngle){
+    var start = startAngle + padAngle/2;
+    var end = endAngle - padAngle/2;
+    var space = end - start;
+    var result = startAngle + (space / 2);
+    // move the result so it goes clockwise
+    return Math.PI / 2 - result;
+}
+
+
+
+/**
  * The types of ranges
  * @type {string[]}
  */
@@ -109,31 +127,13 @@ HealthMeasurement.additionalRanges = ["yellow_min", "yellow_max", "red_min", "re
 
 /**
  *
- * @param groupedMeasurements
+ * @param groups
  * @param w
  * @param h
  * @param className
  * @constructor
  */
-function HealthGraph(groupedMeasurements, w, h, className){
-
-
-
-    /**
-     *
-     * @param startAngle
-     * @param endAngle
-     * @param padAngle
-     * @returns {number}
-     */
-    function getAngleCenter(startAngle, endAngle, padAngle){
-        var start = startAngle + padAngle/2;
-        var end = endAngle - padAngle/2;
-        var space = end - start;
-        var result = startAngle + (space / 2);
-        // move the result so it goes clockwise
-        return Math.PI / 2 - result;
-    }
+function HealthGraph(groups, w, className){
 
     /*
      function angle(startAngle, endAngle) {
@@ -144,8 +144,6 @@ function HealthGraph(groupedMeasurements, w, h, className){
      return (centroidAngle * 180) / Math.PI;
      }
      */
-
-
 
 
     // each circle has
@@ -169,46 +167,243 @@ function HealthGraph(groupedMeasurements, w, h, className){
     // Other options
     var outerRadius = w * 0.4; // check a scale function from d3
     var innerRadius = w * 0.3;
-    var labelRadius = w * 0.45;
+    var defaultLabelRadius = w * 0.45;
 
     var groupLabelFontSize = 12;
     var measurementLabelFontSize = 8;
-    var measurementCircleRadius = 4;
 
-    var arc = d3.svg.arc()
-        .innerRadius(innerRadius)
-        .outerRadius(outerRadius);
+    var circleRadius = 4;
 
-    var inGroup = []; // how many healthMeasurements in each group
-    for(var i = 0; i < groupedMeasurements.length; i ++)
-        inGroup.push(groupedMeasurements[i].healthMeasurements.length);
+    var padAngle = Math.PI / 256;
 
-    var pie = d3.layout.pie()
-        .value(function (d) { return d; })
-        .sort(null); // no ordering to preserve the order from the data source
+    var numberOfMeasurementsInEachGroup = []; // how many healthMeasurements in each group
 
-    pie.padAngle(Math.PI / 256); // TODO: adjust as well depending on the number of healthMeasurements
+    var svg;
+    var hGraphWrapper; // main wrapper
+    var hGraph; // and SVG group
 
-    this.svg = d3.select("body")
+    var arc;
+    var pie;
+
+    var measurementsDataset = [];
+    var measurementsDataObjects;
+
+    var polygonData = [];
+
+    var timestamp = 0;
+
+
+    svg = d3.select("body")
         .append("div")
         .attr("class", className)
         .append("svg")
         .attr("width", w)
-        .attr("height", h);
+        .attr("height", w);
 
-    var pieObjects = pie(inGroup); // build the pie chart using the number of healthMeasurements in each group
-    var hGraphWrapper = this.svg.append("g") // needed for custom pan zoom library
+    // needed for custom pan zoom library
+    hGraphWrapper = svg.append("g")
         .attr("class", "hGraph-wrapper");
-    var hGraphD3Group = hGraphWrapper.append("g").attr("class", "hGraph");
-    var arcsG = hGraphD3Group.append("g").attr("class", "arcs");
-    var arcs = arcsG.selectAll("g.arc")
-        .data(pieObjects)
+
+    hGraph = hGraphWrapper.append("g").attr("class", "hGraph");
+
+    arc = d3.svg.arc()
+        .innerRadius(innerRadius)
+        .outerRadius(outerRadius);
+
+
+    for(var i = 0; i < groups.length; i ++)
+        numberOfMeasurementsInEachGroup.push(groups[i].measurements.length);
+
+    pie = d3.layout.pie()
+        .value(function (d) {
+            return d;
+        })
+        .sort(null); // no ordering to preserve the order from the data source
+
+    pie.padAngle(padAngle);
+
+    hGraph.append("g")
+        .attr("class", "arcs")
+        .selectAll("g.arc")
+        .data(pie(numberOfMeasurementsInEachGroup))
         .enter()
         .append("g")
-        .attr("class", "arc");
-    var labelData = [];
-    var healthMeasurements = []; // hGraph healthMeasurements
-    var pieAngleData = []; // an array to save the start, pad and end angles of each section
+        .attr("class", "arc")
+        .append("path")
+        .attr({
+            "fill": "#74c476",
+            //"stroke": "#74c476",
+            "stroke": "none",
+            "opacity": 0.3,
+            "d": arc
+        });
+
+    // a pie chart for the measurements
+
+    pie = d3.layout.pie()
+        .value(function (d) {
+            return 1;
+        })
+        .sort(null); // no ordering to preserve the order from the data source
+    pie.padAngle(padAngle);
+
+
+    for(var i = 0; i < groups.length; i ++){
+
+        measurementsDataset = measurementsDataset.concat(groups[i].measurements);
+
+
+    }
+
+    measurementsDataObjects = pie(measurementsDataset);
+
+    // console.log(measurementsDataObjects);
+
+    hGraph.append("g")
+        .attr("class", "graphs");
+
+    hGraph.selectAll("g.graphs")
+        .append("g")
+        .attr("class", "activeGraph");
+
+    hGraph.selectAll("g.activeGraph")
+        .append("g")
+        .attr("class", "measurements")
+        .selectAll("g.measurement")
+        .data(measurementsDataObjects)
+        .enter()
+        .append("g")
+        .attr("class", "measurement")
+        .each(function () {
+            polygonData.push([0, 0]);
+        });
+
+
+
+    hGraph.selectAll("g.activeGraph")
+        .append("g")
+        .attr("class", "polygon")
+        .selectAll("polygon")
+        .data(function () {
+            return [polygonData];
+        })
+        .enter()
+        .append("polygon")
+        .attr("points", function(d) {
+            // compute the coordinates
+            return d.join(" ");
+        }).attr({
+            "stroke": "#5b5b5b",
+            "stroke-width": 1,
+            "fill": "none",
+            // "fill-opacity": 0.15,
+            "vector-effect": "non-scaling-stroke"
+        });
+
+    hGraph.selectAll("g.activeGraph")
+        .selectAll("g.measurement")
+        .append("circle")
+        .attr({
+            "stroke": "black",
+            "stroke-width": "1",
+            "fill": "white",
+            "r": circleRadius,
+            "cx": 0,
+            "cy": 0
+        });
+
+    hGraph.selectAll("g.activeGraph")
+        .selectAll("g.measurements")
+        .each(function () {
+            d3.select(this).node().parentNode.appendChild(d3.select(this).node());
+        });
+
+
+
+    // how to update the polygon
+
+    polygonData = [];
+
+    hGraph.selectAll("g.activeGraph")
+        .selectAll("g.measurement")
+        .each(function (d) {
+            polygonData.push(getArc(d.data, 0).centroid(d));
+        });
+
+
+    hGraph.selectAll("g.activeGraph")
+        .selectAll("g.polygon")
+        .selectAll("polygon")
+        .data(function () {
+            return [polygonData];
+        })
+        .transition()
+        .attr("points", function(d) {
+            // compute the coordinates
+            return [d].join(" ");
+        });
+
+    // how to update the circles
+
+    hGraph.selectAll("g.activeGraph")
+        .selectAll("g.measurement")
+        .selectAll("circle")
+        .transition()
+        .attr("cx", function (d) {
+            return getArc(d.data, timestamp).centroid(d)[0];
+        })
+        .attr("cy", function (d) {
+            return getArc(d.data, timestamp).centroid(d)[1];
+        });
+
+
+    function getArc(measurement, timestamp){
+        var arc;
+        var radius;
+
+        radius = getRadius(measurement, timestamp);
+
+        arc = d3.svg.arc()
+            .innerRadius(radius)
+            .outerRadius(radius);
+
+        return arc;
+    }
+
+    function getRadius(measurement, timestamp){
+
+        var scale;
+        var index;
+        var samples;
+        var selectedSample;
+        var radius;
+
+        scale = d3.scale.linear()
+            .domain([measurement.min, measurement.max])
+            .range([innerRadius, outerRadius]);
+
+        samples = measurement.samples;
+        index = getSampleIndex(timestamp, samples);
+
+        selectedSample = measurement.samples[index];
+
+        radius = scale(selectedSample.value);
+
+        return radius;
+    }
+
+    function getSampleIndex(timestamp, samples){
+
+        // TODO: get the actual index of the sample closest to the given timestamp
+
+        return 0;
+    }
+
+
+    /*
+    // var labelData = [];
+    // var healthMeasurements = []; // hGraph healthMeasurements
+    // var pieAngleData = []; // an array to save the start, pad and end angles of each section
 
     arcs.append("path")
         .attr({
@@ -219,16 +414,20 @@ function HealthGraph(groupedMeasurements, w, h, className){
             "d": arc
         })
         .each(function (d) {
+
+
+
             pieAngleData.push({
                 startAngle: d.startAngle,
                 padAngle: d.padAngle,
                 endAngle: d.endAngle
             })
+
+
+
         });
 
-    /**
-     * Creating the view models
-     */
+
     var groupHealthMeasurementLabel;
     var groupOfMeasurements;
     var dataMeasurements;
@@ -244,17 +443,13 @@ function HealthGraph(groupedMeasurements, w, h, className){
         pieData = pieAngleData[i];
         middleAngle = getAngleCenter(pieData.startAngle, pieData.endAngle, pieData.padAngle);
 
-        /**
-         * Labels for the groups of healthMeasurements
-         * @type {{label: *, text: *, fontSize: number, angle: number, r0: number, r1: number, r: number, lineColor: string, lineWidth: number, className: string}}
-         */
         groupHealthMeasurementLabel = {
             "label": groupOfMeasurements.label,
             "text": groupOfMeasurements.label,
             "fontSize": groupLabelFontSize,
             "angle": middleAngle,
             "r0": outerRadius,
-            "r1": labelRadius,
+            "r1": defaultLabelRadius,
             "r": 0,
             "lineColor": "#74c476",
             "lineWidth": 3,
@@ -290,7 +485,7 @@ function HealthGraph(groupedMeasurements, w, h, className){
     for(var i = 0; i < healthMeasurements.length; i ++){
         var m = healthMeasurements[i],
             text = m.label + ": " + m.samples[m.sample].value + " " + m.units,
-            r1 = Math.max(m.radius + 20, labelRadius);
+            r1 = Math.max(m.radius + 20, defaultLabelRadius);
 
         healthMeasurementLabel = {
             "label": m.label,
@@ -315,7 +510,7 @@ function HealthGraph(groupedMeasurements, w, h, className){
     this.labelData = labelData;
     var self = this;
     this.mouseHighlight(self.plotLabels(labelData));
-    this.labelRadius = labelRadius;
+    this.defaultLabelRadius = defaultLabelRadius;
 
     hGraphD3Group.append("g").attr("class", "graphs"); // a group to hold all the graphs
     // render the polygon and the circles
@@ -326,6 +521,7 @@ function HealthGraph(groupedMeasurements, w, h, className){
     this.graphs.node().appendChild(graph.node());
     var hCircles = graph.selectAll("circle");
     this.mouseHighlight(hCircles);
+    */
 
     // flip the y axis
     // var scale = "scale(1, -1)";
@@ -338,8 +534,9 @@ function HealthGraph(groupedMeasurements, w, h, className){
     // pointsGroup.attr("transform", scale + " " + rotate);
     // polygon.attr("transform", scale + " " + rotate);
     // move the hGraph
-    var translate = "translate(" + (w * 0.5) + ", " + (h * 0.5) + ")";
-    hGraphD3Group.attr("transform", translate);
+
+    var translate = "translate(" + (w * 0.5) + ", " + (w * 0.5) + ")";
+    hGraph.attr("transform", translate);
 
 }
 

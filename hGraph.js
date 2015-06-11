@@ -172,14 +172,13 @@ function HealthGraph(groups, w, className){
     var groupLabelFontSize = 12;
     var measurementLabelFontSize = 8;
 
-    var circleRadius = 4;
+    var circleRadius = 6;
 
     var padAngle = Math.PI / 256;
 
     var numberOfMeasurementsInEachGroup = []; // how many healthMeasurements in each group
 
     var svg;
-    var hGraphWrapper; // main wrapper
     var hGraph; // and SVG group
 
     var arc;
@@ -192,27 +191,86 @@ function HealthGraph(groups, w, className){
 
     var timestamp = 0;
 
+    function createSVG(className, w){
+        var svg;
 
-    svg = d3.select("body")
-        .append("div")
-        .attr("class", className)
-        .append("svg")
-        .attr("width", w)
-        .attr("height", w);
+        svg = d3.select("body")
+            .append("div")
+            .attr("class", className)
+            .append("svg")
+            .attr("width", w)
+            .attr("height", w);
 
-    // needed for custom pan zoom library
-    hGraphWrapper = svg.append("g")
-        .attr("class", "hGraph-wrapper");
+        return svg;
+    }
 
-    hGraph = hGraphWrapper.append("g").attr("class", "hGraph");
+    function createHGraph(svg){
+        var hGraph;
+
+        hGraph = svg.append("g")
+            .attr("class", "hGraph-wrapper")
+            .append("g")
+            .attr("class", "hGraph");
+
+        return hGraph;
+    }
+
+    function getMeasurementsInEachGroup(dataset){
+        var group;
+        var total = [];
+        var measurements;
+
+        for(var i = 0; i < dataset.length; i ++){
+            group = dataset[i];
+            measurements = group.measurements;
+            total.push(measurements.length);
+        }
+
+        return total;
+    }
+
+    function createZones(d3target, sizeOfEachZone, pieFunction, arcFunction){
+        var zones;
+
+        zones = d3target.append("g")
+            .attr("class", "arcs")
+            .selectAll("g.arc")
+            .data(pieFunction(sizeOfEachZone))
+            .enter()
+            .append("g")
+            .attr("class", "arc")
+            .append("path")
+            .attr({
+                "fill": "#74c476",
+                //"stroke": "#74c476",
+                "stroke": "none",
+                "opacity": 0.3,
+                "d": arcFunction
+            });
+
+        return zones;
+    }
+
+    function getAllMeasurementsFromDataset(dataset){
+        var group;
+        var measurements;
+        var total = [];
+
+        for(var i = 0; i < dataset.length; i ++){
+            group = dataset[i];
+            measurements = group.measurements;
+            total = total.concat(measurements);
+        }
+
+        return total;
+    }
+
+    svg = createSVG(className, w);
+    hGraph = createHGraph(svg);
 
     arc = d3.svg.arc()
         .innerRadius(innerRadius)
         .outerRadius(outerRadius);
-
-
-    for(var i = 0; i < groups.length; i ++)
-        numberOfMeasurementsInEachGroup.push(groups[i].measurements.length);
 
     pie = d3.layout.pie()
         .value(function (d) {
@@ -222,21 +280,7 @@ function HealthGraph(groups, w, className){
 
     pie.padAngle(padAngle);
 
-    hGraph.append("g")
-        .attr("class", "arcs")
-        .selectAll("g.arc")
-        .data(pie(numberOfMeasurementsInEachGroup))
-        .enter()
-        .append("g")
-        .attr("class", "arc")
-        .append("path")
-        .attr({
-            "fill": "#74c476",
-            //"stroke": "#74c476",
-            "stroke": "none",
-            "opacity": 0.3,
-            "d": arc
-        });
+    createZones(hGraph, getMeasurementsInEachGroup(groups), pie, arc);
 
     // a pie chart for the measurements
 
@@ -245,27 +289,22 @@ function HealthGraph(groups, w, className){
             return 1;
         })
         .sort(null); // no ordering to preserve the order from the data source
+
     pie.padAngle(padAngle);
 
+    measurementsDataObjects = pie(getAllMeasurementsFromDataset(groups));
 
-    for(var i = 0; i < groups.length; i ++){
-
-        measurementsDataset = measurementsDataset.concat(groups[i].measurements);
-
-
-    }
-
-    measurementsDataObjects = pie(measurementsDataset);
-
-    // console.log(measurementsDataObjects);
-
+    // create the graph container
     hGraph.append("g")
         .attr("class", "graphs");
 
+    // create the active graph
     hGraph.selectAll("g.graphs")
         .append("g")
         .attr("class", "activeGraph");
 
+    // create the measurements container
+    // create each measurement with the data
     hGraph.selectAll("g.activeGraph")
         .append("g")
         .attr("class", "measurements")
@@ -278,8 +317,7 @@ function HealthGraph(groups, w, className){
             polygonData.push([0, 0]);
         });
 
-
-
+    // create a polygon
     hGraph.selectAll("g.activeGraph")
         .append("g")
         .attr("class", "polygon")
@@ -300,6 +338,7 @@ function HealthGraph(groups, w, className){
             "vector-effect": "non-scaling-stroke"
         });
 
+    // create the circles in each SVG group with the class "measurement"
     hGraph.selectAll("g.activeGraph")
         .selectAll("g.measurement")
         .append("circle")
@@ -312,6 +351,9 @@ function HealthGraph(groups, w, className){
             "cy": 0
         });
 
+    // move the circles and their containing groups to the front
+    // appending them to the parent makes them go to the bottom of the list
+    // thus moving them to the front
     hGraph.selectAll("g.activeGraph")
         .selectAll("g.measurements")
         .each(function () {
@@ -321,46 +363,52 @@ function HealthGraph(groups, w, className){
 
 
     // how to update the polygon
+    function updatePolygon(timestamp){
+        polygonData = [];
 
-    polygonData = [];
-
-    hGraph.selectAll("g.activeGraph")
-        .selectAll("g.measurement")
-        .each(function (d) {
-            polygonData.push(getArc(d.data, 0).centroid(d));
-        });
+        hGraph.selectAll("g.activeGraph")
+            .selectAll("g.measurement")
+            .each(function (d) {
+                polygonData.push(getArc(d.data, timestamp).centroid(d));
+            });
 
 
-    hGraph.selectAll("g.activeGraph")
-        .selectAll("g.polygon")
-        .selectAll("polygon")
-        .data(function () {
-            return [polygonData];
-        })
-        .transition()
-        .attr("points", function(d) {
-            // compute the coordinates
-            return [d].join(" ");
-        });
+        hGraph.selectAll("g.activeGraph")
+            .selectAll("g.polygon")
+            .selectAll("polygon")
+            .data(function () {
+                return [polygonData];
+            })
+            .transition()
+            .attr("points", function(d) {
+                // compute the coordinates
+                return [d].join(" ");
+            });
+    }
 
     // how to update the circles
+    function updateMeasurements(timestamp){
+        hGraph.selectAll("g.activeGraph")
+            .selectAll("g.measurement")
+            .selectAll("circle")
+            .transition()
+            .attr("cx", function (d) {
+                return getArc(d.data, timestamp).centroid(d)[0];
+            })
+            .attr("cy", function (d) {
+                return getArc(d.data, timestamp).centroid(d)[1];
+            })
+            .attr("fill", function (d) {
+                return getColor(d.data, timestamp);
+            });
+    }
 
-    hGraph.selectAll("g.activeGraph")
-        .selectAll("g.measurement")
-        .selectAll("circle")
-        .transition()
-        .attr("cx", function (d) {
-            return getArc(d.data, timestamp).centroid(d)[0];
-        })
-        .attr("cy", function (d) {
-            return getArc(d.data, timestamp).centroid(d)[1];
-        });
-
-
+    // get the arc object to calculate the centroid
     function getArc(measurement, timestamp){
         var arc;
         var radius;
 
+        // needs a radius that is calculated using the scale
         radius = getRadius(measurement, timestamp);
 
         arc = d3.svg.arc()
@@ -370,6 +418,7 @@ function HealthGraph(groups, w, className){
         return arc;
     }
 
+    // creates the radius using the scale of min and max
     function getRadius(measurement, timestamp){
 
         var scale;
@@ -392,12 +441,73 @@ function HealthGraph(groups, w, className){
         return radius;
     }
 
+    // selects the sample closest to the timestamp provided but before that not after
     function getSampleIndex(timestamp, samples){
 
         // TODO: get the actual index of the sample closest to the given timestamp
 
-        return 0;
+        return timestamp;
     }
+
+    function getColor(measurement, timestamp){
+        var color = "white"; // by default
+        var yellowMin = "yellow_min";
+        var yellowMax = "yellow_max";
+        var redMin = "red_min";
+        var redMax = "red_max";
+        var samples = measurement.samples;
+        var hasAdditionalRanges = false;
+        var sample;
+        var index;
+
+
+        index = getSampleIndex(timestamp, samples);
+        sample = measurement.samples[index];
+
+        // checking now for less than the recommended
+        if (typeof measurement[yellowMin] != 'undefined'){
+            hasAdditionalRanges = true;
+            if(sample.value <= measurement[yellowMin]){
+                color = "gold";
+            }
+        }
+
+        if (typeof measurement[redMin] != 'undefined'){
+            hasAdditionalRanges = true;
+            if(sample.value <= measurement[redMin]){
+                color = "tomato";
+            }
+        }
+        // checking for more than the recommended
+        if (typeof measurement[yellowMax] != 'undefined'){
+            hasAdditionalRanges = true;
+            if(sample.value >= measurement[yellowMax]){
+                color = "gold";
+            }
+        }
+
+        if (typeof measurement[redMax] != 'undefined'){
+            hasAdditionalRanges = true;
+            if(sample.value >= measurement[redMax]){
+                color = "tomato";
+            }
+        }
+
+        if (hasAdditionalRanges && color === "white"){
+            color = "#73D651";
+        }
+
+        return color;
+    }
+
+    // here we can call the update functions
+    updatePolygon(0); // testing the methods
+    updateMeasurements(0); // testing the methods
+
+    setTimeout(function () {
+        updatePolygon(1); // testing the methods
+        updateMeasurements(1); // testing the methods
+    }, 2000);
 
 
     /*

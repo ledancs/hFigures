@@ -265,103 +265,6 @@ function HealthGraph(groups, w, className){
         return total;
     }
 
-    svg = createSVG(className, w);
-    hGraph = createHGraph(svg);
-
-    arc = d3.svg.arc()
-        .innerRadius(innerRadius)
-        .outerRadius(outerRadius);
-
-    pie = d3.layout.pie()
-        .value(function (d) {
-            return d;
-        })
-        .sort(null); // no ordering to preserve the order from the data source
-
-    pie.padAngle(padAngle);
-
-    createZones(hGraph, getMeasurementsInEachGroup(groups), pie, arc);
-
-    // a pie chart for the measurements
-
-    pie = d3.layout.pie()
-        .value(function (d) {
-            return 1;
-        })
-        .sort(null); // no ordering to preserve the order from the data source
-
-    pie.padAngle(padAngle);
-
-    measurementsDataObjects = pie(getAllMeasurementsFromDataset(groups));
-
-    // create the graph container
-    hGraph.append("g")
-        .attr("class", "graphs");
-
-    // create the active graph
-    hGraph.selectAll("g.graphs")
-        .append("g")
-        .attr("class", "activeGraph");
-
-    // create the measurements container
-    // create each measurement with the data
-    hGraph.selectAll("g.activeGraph")
-        .append("g")
-        .attr("class", "measurements")
-        .selectAll("g.measurement")
-        .data(measurementsDataObjects)
-        .enter()
-        .append("g")
-        .attr("class", "measurement")
-        .each(function () {
-            polygonData.push([0, 0]);
-        });
-
-    // create a polygon
-    hGraph.selectAll("g.activeGraph")
-        .append("g")
-        .attr("class", "polygon")
-        .selectAll("polygon")
-        .data(function () {
-            return [polygonData];
-        })
-        .enter()
-        .append("polygon")
-        .attr("points", function(d) {
-            // compute the coordinates
-            return d.join(" ");
-        }).attr({
-            "stroke": "#5b5b5b",
-            "stroke-width": 1,
-            "fill": "none",
-            // "fill-opacity": 0.15,
-            "vector-effect": "non-scaling-stroke"
-        });
-
-    // create the circles in each SVG group with the class "measurement"
-    hGraph.selectAll("g.activeGraph")
-        .selectAll("g.measurement")
-        .append("circle")
-        .attr({
-            "stroke": "black",
-            "stroke-width": "1",
-            "fill": "white",
-            "r": circleRadius,
-            "cx": 0,
-            "cy": 0
-        });
-
-    // move the circles and their containing groups to the front
-    // appending them to the parent makes them go to the bottom of the list
-    // thus moving them to the front
-    hGraph.selectAll("g.activeGraph")
-        .selectAll("g.measurements")
-        .each(function () {
-            d3.select(this).node().parentNode.appendChild(d3.select(this).node());
-        });
-
-
-
     // how to update the polygon
     function updatePolygon(timestamp){
         polygonData = [];
@@ -499,6 +402,102 @@ function HealthGraph(groups, w, className){
 
         return color;
     }
+
+    /**
+     * begin the main code
+     */
+
+    svg = createSVG(className, w);
+    hGraph = createHGraph(svg);
+
+    arc = d3.svg.arc()
+        .innerRadius(innerRadius)
+        .outerRadius(outerRadius);
+
+    pie = d3.layout.pie().sort(null); // no ordering to preserve the order from the data source
+
+    pie.padAngle(padAngle);
+
+    createZones(hGraph, getMeasurementsInEachGroup(groups), pie, arc);
+
+    // a pie chart for the measurements
+
+    pie = d3.layout.pie()
+        .value(function (d) {
+            // all the measurements will have the same space of the donut 
+            return 1;
+        })
+        .sort(null); // no ordering to preserve the order from the data source
+
+    pie.padAngle(padAngle);
+
+    measurementsDataObjects = pie(getAllMeasurementsFromDataset(groups));
+
+    // create the graph container
+    hGraph.append("g")
+        .attr("class", "graphs");
+
+    // create the active graph
+    hGraph.selectAll("g.graphs")
+        .append("g")
+        .attr("class", "activeGraph");
+
+    // create the measurements container
+    // create each measurement with the data
+    hGraph.selectAll("g.activeGraph")
+        .append("g")
+        .attr("class", "measurements")
+        .selectAll("g.measurement")
+        .data(measurementsDataObjects)
+        .enter()
+        .append("g")
+        .attr("class", "measurement")
+        .each(function () {
+            polygonData.push([0, 0]);
+        });
+
+    // create a polygon
+    hGraph.selectAll("g.activeGraph")
+        .append("g")
+        .attr("class", "polygon")
+        .selectAll("polygon")
+        .data(function () {
+            return [polygonData];
+        })
+        .enter()
+        .append("polygon")
+        .attr("points", function(d) {
+            // compute the coordinates
+            return d.join(" ");
+        }).attr({
+            "stroke": "#5b5b5b",
+            "stroke-width": 1,
+            "fill": "none",
+            // "fill-opacity": 0.15,
+            "vector-effect": "non-scaling-stroke"
+        });
+
+    // create the circles in each of the SVG group with the class "measurement"
+    hGraph.selectAll("g.activeGraph")
+        .selectAll("g.measurement")
+        .append("circle")
+        .attr({
+            "stroke": "black",
+            "stroke-width": "1",
+            "fill": "white",
+            "r": circleRadius,
+            "cx": 0,
+            "cy": 0
+        });
+
+    // move the circles and their containing groups to the front
+    // appending them to the parent makes them go to the bottom of the list
+    // thus moving them to the front
+    hGraph.selectAll("g.activeGraph")
+        .selectAll("g.measurements")
+        .each(function () {
+            d3.select(this).node().parentNode.appendChild(d3.select(this).node());
+        });
 
     // here we can call the update functions
     updatePolygon(0); // testing the methods

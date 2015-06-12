@@ -172,7 +172,7 @@ function HealthGraph(groups, w, className){
     var groupLabelFontSize = 12;
     var measurementLabelFontSize = 8;
 
-    var circleRadius = 6;
+    var circleRadius = 5;
 
     var padAngle = Math.PI / 256;
 
@@ -344,6 +344,32 @@ function HealthGraph(groups, w, className){
         return radius;
     }
 
+    // get the arc object to calculate the centroid for the labels
+    // this one needs to check the largest radius to avoid overlaps with the circles
+    function getLabelArc(d3graphs, label, defaultRadius){
+        var arc;
+
+        arc = d3.svg.arc()
+            .innerRadius(defaultRadius)
+            .outerRadius(defaultRadius);
+
+        return arc;
+    }
+
+    // get the final x and y for the label groups
+    function getLabelTranslateCorrdinates(d3graphs, label, defaultRadius){
+
+        // get the max radius from all the measurements plotted that have the same label
+
+        // move the labels horizontally outside the radius (x)
+
+        // move the labels vertically to avoid overlapping (y)
+
+        //return the final [x, y]
+
+
+    }
+
     // selects the sample closest to the timestamp provided but before that not after
     function getSampleIndex(timestamp, samples){
 
@@ -403,6 +429,60 @@ function HealthGraph(groups, w, className){
         return color;
     }
 
+    function createSvgMeasurementGroups(d3target, data){
+        var svgGroups;
+
+        svgGroups = d3target.selectAll("g.measurement")
+            .data(data)
+            .enter()
+            .append("g")
+            .attr("class", "measurement");
+
+        return svgGroups;
+
+    }
+
+    function createSvgPolygon(d3target, data){
+        var polygonGroup;
+
+        polygonGroup = d3target.append("g")
+            .attr("class", "polygon")
+            .selectAll("polygon")
+            .data(function () {
+                return [data];
+            })
+            .enter()
+            .append("polygon")
+            .attr("points", function(d) {
+                // compute the coordinates
+                return d.join(" ");
+            }).attr({
+                "stroke": "#5b5b5b",
+                "stroke-width": 1,
+                "fill": "none",
+                // "fill-opacity": 0.15,
+                "vector-effect": "non-scaling-stroke"
+            });
+
+        return polygonGroup;
+    }
+
+    function createMeasurementCircles(d3target, circleRadius){
+        var circles;
+
+        circles = d3target.append("circle")
+            .attr({
+                "stroke": "black",
+                "stroke-width": "1",
+                "fill": "white",
+                "r": circleRadius,
+                "cx": 0,
+                "cy": 0
+            });
+
+        return circles;
+    }
+
     /**
      * begin the main code
      */
@@ -440,55 +520,28 @@ function HealthGraph(groups, w, className){
     // create the active graph
     hGraph.selectAll("g.graphs")
         .append("g")
-        .attr("class", "activeGraph");
+        .attr("class", "graph activeGraph");
 
     // create the measurements container
     // create each measurement with the data
     hGraph.selectAll("g.activeGraph")
         .append("g")
-        .attr("class", "measurements")
-        .selectAll("g.measurement")
-        .data(measurementsDataObjects)
-        .enter()
-        .append("g")
-        .attr("class", "measurement")
-        .each(function () {
+        .attr("class", "measurements");
+
+    // create the measurement groups
+    createSvgMeasurementGroups(hGraph.selectAll("g.measurements"), measurementsDataObjects)
+        .each(function (d) {
             polygonData.push([0, 0]);
         });
 
-    // create a polygon
-    hGraph.selectAll("g.activeGraph")
-        .append("g")
-        .attr("class", "polygon")
-        .selectAll("polygon")
-        .data(function () {
-            return [polygonData];
-        })
-        .enter()
-        .append("polygon")
-        .attr("points", function(d) {
-            // compute the coordinates
-            return d.join(" ");
-        }).attr({
-            "stroke": "#5b5b5b",
-            "stroke-width": 1,
-            "fill": "none",
-            // "fill-opacity": 0.15,
-            "vector-effect": "non-scaling-stroke"
-        });
-
     // create the circles in each of the SVG group with the class "measurement"
-    hGraph.selectAll("g.activeGraph")
-        .selectAll("g.measurement")
-        .append("circle")
-        .attr({
-            "stroke": "black",
-            "stroke-width": "1",
-            "fill": "white",
-            "r": circleRadius,
-            "cx": 0,
-            "cy": 0
-        });
+
+    createMeasurementCircles(
+        hGraph.selectAll("g.activeGraph")
+            .selectAll("g.measurement"), circleRadius);
+
+    // create a polygon
+    createSvgPolygon(hGraph.selectAll("g.activeGraph"), polygonData);
 
     // move the circles and their containing groups to the front
     // appending them to the parent makes them go to the bottom of the list
@@ -499,15 +552,98 @@ function HealthGraph(groups, w, className){
             d3.select(this).node().parentNode.appendChild(d3.select(this).node());
         });
 
+    // now the labels
+
+    // create label container
+    hGraph.append("g")
+        .attr("class", "labels");
+
+    // create all the labels
+    hGraph.selectAll("g.labels")
+        .selectAll("g.label")
+        .data(measurementsDataObjects)
+        .enter()
+        .append("g")
+        .attr("class", "label");
+
+    // create the text
+    hGraph.selectAll("g.label")
+        .append("text")
+        .text(function (d) {
+            // use the timestamp to fetch the value from the samples
+            return d.data.label;
+        })
+        .attr({
+            "text-anchor": "middle",
+            "x": 0,
+            "y": 0,
+            "font-size": 12,
+            "fill": "grey"
+        })
+        .each(function(d){
+            // IMPORTANT: we need to add here the size of the text for the rectangle's dimensions!
+            d.box = this.getBBox();
+        });
+
+    // create the rectangle
+    hGraph.selectAll("g.label")
+        .append("rect")
+        .attr("x", function(d){
+            return d.box.x - 10;
+        })
+        .attr("y", function (d) {
+            return d.box.y;
+        })
+        .attr("height", function (d) {
+            return d.box.height;
+        })
+        .attr("width", function (d) {
+            return d.box.width + 20;
+        })
+        .attr({
+            "vector-effect": "non-scaling-stroke",
+            "rx": 0.5,
+            "ry": 0.5,
+            // "fill": "#d5f5d5",
+            "fill": "white"
+        })
+        .attr("stroke", "grey")
+        .attr("stroke-width", 1);
+
+    // move the text in front
+    hGraph.selectAll("g.label")
+        .selectAll("text")
+        .each(function (d) {
+            d3.select(this).node().parentNode.appendChild(d3.select(this).node());
+        });
+
+    // move them to the default label radius
+    hGraph.selectAll("g.label")
+        .transition()
+        .attr("transform", function (d) {
+
+            // TODO: call the wrapper routine that calculates the final coordinates of the labels
+
+            return "translate (" +
+                getLabelArc(
+                    hGraph.selectAll("g.graphs"),
+                    d.data.label,
+                    defaultLabelRadius)
+                    .centroid(d).join(",") +
+                ")";
+        });
+
+
     // here we can call the update functions
     updatePolygon(0); // testing the methods
     updateMeasurements(0); // testing the methods
 
+    /*
     setTimeout(function () {
         updatePolygon(1); // testing the methods
         updateMeasurements(1); // testing the methods
     }, 2000);
-
+    */
 
     /*
     // var labelData = [];

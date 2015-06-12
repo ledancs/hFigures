@@ -2,129 +2,6 @@
  * Created by andres on 4/23/15.
  */
 
-
-/**
- *
- * @param measurement
- * @param angle
- * @param r0
- * @param r1
- * @param r
- * @param groupName
- * @constructor
- */
-function HealthMeasurement(measurement, angle, r0, r1, r, groupName){
-
-    this.label = measurement.label;
-    this.r = r; // this is the radius of the svg circle element
-    this.units = measurement.units;
-    this.angle = angle;
-
-    // recommended minimum and maximum (mandatory)
-    this.min = measurement.min;
-    this.max = measurement.max;
-
-    // add the group to which this measurement belongs to
-    this.groupName = groupName;
-
-    // the array of samples
-    this.samples = measurement.samples;
-
-    // the selected sample
-    // this.sample = this.samples.length - 1;
-    this.sample = 0;
-
-    // the hGraph minimum and maximum radii
-    this.r0 = r0; // inner radius
-    this.r1 = r1; // outer radius
-
-    // by default we have no additional ranges
-    this.additionalRanges = false;
-
-    // compute the scale
-    this.scale = d3.scale.linear()
-        .domain([measurement.min, measurement.max])
-        .range([r0, r1]);
-
-
-    // initially the radius of the circle, as well as the x and y points are set to zero
-    this.x = this.y = this.radius = 0;
-
-    // the color by default is white
-    this.color = "white";
-
-    // check for yellow and red ranges
-    var ranges = HealthMeasurement.additionalRanges; // shorthand
-
-    // add additional ranges when needed
-    for(var i = 0; i < ranges.length; i++){
-        if (typeof measurement[ranges[i]] != 'undefined'){
-            this.additionalRanges = true;
-            this[ranges[i]] = measurement[ranges[i]];
-        }
-    }
-
-    // compute the position and color
-    // that is the radius, x and y values
-    this.calculatePosition();
-}
-/**
- * Computes the position and sets the x, y and radius based on the selected sample.
- */
-HealthMeasurement.prototype.calculatePosition = function () {
-    var sample; // the selected sample
-    var value; // the value of the selected sample
-
-    sample = this.samples[this.sample];
-    value = sample.value;
-
-    this.radius = this.scale(value);
-    this.x = Math.cos(this.angle) * this.radius;
-    this.y = Math.sin(this.angle) * this.radius * -1;
-
-    this.color = this.additionalRanges ? "#73D651": "white";
-
-    if(this["yellow_max"] && value >= this.max){
-        this.color = "gold";
-    }
-    if(this["red_max"] && value >= this["red_max"]){
-        this.color = "tomato";
-    }
-
-    if(this["yellow_min"] && value <= this.min){
-        this.color = "gold";
-    }
-    if(this["red_min"] && value <= this["red_min"]){
-        this.color = "tomato";
-    }
-
-};
-
-/**
- *
- * @param startAngle
- * @param endAngle
- * @param padAngle
- * @returns {number}
- */
-function getAngleCenter(startAngle, endAngle, padAngle){
-    var start = startAngle + padAngle/2;
-    var end = endAngle - padAngle/2;
-    var space = end - start;
-    var result = startAngle + (space / 2);
-    // move the result so it goes clockwise
-    return Math.PI / 2 - result;
-}
-
-
-
-/**
- * The types of ranges
- * @type {string[]}
- */
-HealthMeasurement.additionalRanges = ["yellow_min", "yellow_max", "red_min", "red_max"];
-
-
 /**
  *
  * @param groups
@@ -158,38 +35,6 @@ function HealthGraph(groups, w, className){
     // each circle computes: radius, x, y, color
     // functions: first, last, next, previous, goto(timestamp)
 
-
-    // Here we begin to build the hGraph instance
-    // all the functions used are inside this scope.
-
-    // TODO: adjust depending on the number of healthMeasurements along with the zoom and font size
-
-    // Other options
-    var outerRadius = w * 0.4; // check a scale function from d3
-    var innerRadius = w * 0.3;
-    var defaultLabelRadius = w * 0.45;
-
-    var groupLabelFontSize = 12;
-    var measurementLabelFontSize = 8;
-
-    var circleRadius = 5;
-
-    var padAngle = Math.PI / 256;
-
-    var numberOfMeasurementsInEachGroup = []; // how many healthMeasurements in each group
-
-    var svg;
-    var hGraph; // and SVG group
-
-    var arc;
-    var pie;
-
-    var measurementsDataset = [];
-    var measurementsDataObjects;
-
-    var polygonData = [];
-
-    var timestamp = 0;
 
     function createSVG(className, w){
         var svg;
@@ -229,13 +74,14 @@ function HealthGraph(groups, w, className){
         return total;
     }
 
-    function createZones(d3target, sizeOfEachZone, pieFunction, arcFunction){
+    function createZones(d3target, dataset, arcFunction){
+
         var zones;
 
         zones = d3target.append("g")
             .attr("class", "arcs")
             .selectAll("g.arc")
-            .data(pieFunction(sizeOfEachZone))
+            .data(dataset)
             .enter()
             .append("g")
             .attr("class", "arc")
@@ -325,8 +171,6 @@ function HealthGraph(groups, w, className){
     function getRadius(measurement, timestamp){
 
         var scale;
-        var index;
-        var samples;
         var selectedSample;
         var radius;
 
@@ -334,26 +178,44 @@ function HealthGraph(groups, w, className){
             .domain([measurement.min, measurement.max])
             .range([innerRadius, outerRadius]);
 
-        samples = measurement.samples;
-        index = getSampleIndex(timestamp, samples);
-
-        selectedSample = measurement.samples[index];
+        selectedSample = getSelectedSample(measurement, timestamp)
 
         radius = scale(selectedSample.value);
 
         return radius;
     }
 
+    function getSelectedSample(measurement, timestamp){
+        var samples = measurement.samples;
+        var index = getSampleIndex(timestamp, samples);
+
+        return measurement.samples[index];
+    }
+
     // get the arc object to calculate the centroid for the labels
     // this one needs to check the largest radius to avoid overlaps with the circles
-    function getLabelArc(d3graphs, label, defaultRadius, timestamp){
+    function getLabelArc(d3root, d, defaultRadius, timestamp){
         var arc;
-        var radius = defaultRadius; // the default to start comparing
+        var radius;
         var margin = 30;
 
-        // TODO: now this function is doing two things, finding the largest radius and returning the arc
+        if("samples" in d.data){
+            radius = getMaxRadiusForMeasurementLabel(d3root, timestamp, defaultRadius, d.data.label, margin);
+        } else {
+            radius = getMaxRadiusForGroupLabel(defaultRadius);
+        }
 
-        d3graphs.selectAll("g.measurements")
+        arc = d3.svg.arc()
+            .innerRadius(radius)
+            .outerRadius(radius);
+
+        return arc;
+    }
+
+    function getMaxRadiusForMeasurementLabel(d3root, timestamp, defaultRadius, label, margin){
+        var radius = defaultRadius; // the default to start comparing
+
+        d3root.selectAll("g.measurements")
             .selectAll("g.measurement")
             .filter(function (d) {
                 return d.data.label === label;
@@ -364,18 +226,19 @@ function HealthGraph(groups, w, className){
 
             });
 
+        return radius;
+    }
 
-        arc = d3.svg.arc()
-            .innerRadius(radius)
-            .outerRadius(radius);
+    function getMaxRadiusForGroupLabel(defaultRadius){
 
-        return arc;
+        // TODO: determine the radius using the measurements that might overlap with this label
+
+        return defaultRadius;
     }
 
     // move the labels outside the calculated radius
-    function moveLabelHorizontally(d){
+    function moveLabelHorizontally(d, angle){
         var offset;
-        var angle = d.startAngle + (d.endAngle - d.startAngle)/2; // preserve the previous angle to complete the circle
 
         offset = d.box.width/2;
 
@@ -386,21 +249,50 @@ function HealthGraph(groups, w, className){
         return offset;
     }
 
+    // move the labels so they do not overlap
+    var verticalLabelLimit = 0;
+    var verticalLabelMargin = 1;
+    function moveLabelVertically(i, angle, height, y){
+
+        var delta = i === 0 ? verticalLabelMargin: 0,
+            upper = angle >= 3/2 * Math.PI || angle <= Math.PI/2;
+
+        var collision = upper ?
+        y + height + verticalLabelMargin >= verticalLabelLimit :
+        y <= verticalLabelLimit;
+
+        if(collision && i > 0)
+            delta = upper ?
+            verticalLabelLimit - y - height - verticalLabelMargin : // negative to move it up
+            verticalLabelLimit - y; // positive to move it down
+
+
+        verticalLabelLimit = upper ?
+        y + delta :
+        y + height + verticalLabelMargin + delta; // add the height and the margin plus possible delta
+
+        return delta;
+
+    }
+
     // get the final x and y for the label groups
-    function getLabelTranslateCoordinates(d, d3graphs, defaultRadius, timestamp){
+    function getLabelCoordinates(d, i, d3root, defaultRadius, timestamp){
         var arc;
         var coordinates;
+        var angle = d.startAngle + (d.endAngle - d.startAngle)/2; // preserve the previous angle to complete the circle
 
         // get the max radius from all the measurements plotted that have the same label
-        arc = getLabelArc(d3graphs, d.data.label, defaultRadius, timestamp);
+        arc = getLabelArc(d3root, d, defaultRadius, timestamp);
         coordinates = arc.centroid(d);
+
         // move the labels horizontally outside the radius (x)
-        coordinates[0] = coordinates[0] + moveLabelHorizontally(d);
+        coordinates[0] = coordinates[0] + moveLabelHorizontally(d, angle);
+
         // move the labels vertically to avoid overlapping (y)
+        coordinates[1] = coordinates[1] + moveLabelVertically(i, angle, d.box.height, coordinates[1]);
 
-        //return the final [x, y]
+        //return the [x, y] coordinates
         return coordinates;
-
     }
 
     // selects the sample closest to the timestamp provided but before that not after
@@ -519,10 +411,10 @@ function HealthGraph(groups, w, className){
     function insertBoxToLabel(d){
         // IMPORTANT: we need to add here the size of the text for the rectangle's dimensions!
         d.box = this.getBBox();
-        d.box.x -= 5;
+        /*d.box.x -= 5;
         d.box.width += 10;
         d.box.y -= 2;
-        d.box.height += 4;
+        d.box.height += 4;*/
     }
 
     function resizeBox(d3labelRectangles){
@@ -540,31 +432,117 @@ function HealthGraph(groups, w, className){
             })
     }
 
-    // update the label text
-    function updateLabels(d3root, timestamp) {
-        d3root.selectAll("g.label")
-            .selectAll("text")
-            .text(function (d) {
-                // TODO: use the timestamp to update the text
-                return d.data.label;
-            })
-            .each(insertBoxToLabel);
+    function ascending (a, b) {
+        var angleA = getAngle(a);
+        var angleB = getAngle(b);
 
-        resizeBox(d3root.selectAll("g.label").selectAll("rect"));
-        // move them to the default label radius
+        return angleA - angleB;
+    }
+
+    function descending (a, b) {
+        var angleA = getAngle(a);
+        var angleB = getAngle(b);
+
+        return angleB - angleA;
+    }
+
+    function getAngle(d){
+        return d.startAngle + (d.endAngle - d.startAngle)/2;
+    }
+
+    function angleUpperRight (d){
+        return getAngle(d) <= Math.PI/2;
+    }
+
+    function angleUpperLeft (d){
+        var angle = getAngle(d);
+
+        return angle >= 3/2 * Math.PI;
+    }
+
+    function angleLowerRight (d){
+        var angle = getAngle(d);
+        return angle > Math.PI/2 && angle <= Math.PI;
+    }
+
+    function angleLowerLeft (d){
+        var angle = getAngle(d);
+
+        return angle < 3/2*Math.PI && angle >= Math.PI;
+    }
+
+    function moveLabels(d3root, anglePosition, sortFunction, timestamp){
+
+        var coordinates;
+
+        verticalLabelLimit = 0;
+
         d3root.selectAll("g.label")
+            .filter(anglePosition)
+            .sort(sortFunction)
             .transition()
-            .attr("transform", function (d) {
-                return "translate (" +
-                    getLabelTranslateCoordinates(d, d3root.selectAll("g.graph"), defaultLabelRadius, timestamp).join(",") +
-                    ")";
+            .attr("transform", function (d, i) {
+
+                coordinates = getLabelCoordinates(d, i, d3root, defaultLabelRadius, timestamp);
+
+                return "translate (" + coordinates.join(",") + ")";
             });
     }
 
-    function createSvgLabelGroups(d3root, data){
-        var groups;
+    function moveAllLabels(d3root, timestamp){
+        // upper right corner
+        moveLabels(d3root, angleUpperRight, descending, timestamp);
 
-        groups = d3root.selectAll("g.labels")
+        // upper left corner
+        moveLabels(d3root, angleUpperLeft, ascending, timestamp);
+
+        // lower right corner
+        moveLabels(d3root, angleLowerRight, ascending, timestamp);
+
+        // lower left corner
+        moveLabels(d3root, angleLowerLeft, descending, timestamp);
+    }
+
+    // update the label text
+    function updateLabels(d3root, timestamp) {
+        var selectedSample;
+
+        d3root.selectAll("g.label")
+            .selectAll("text")
+            .text(function (d) {
+
+                if("samples" in d.data){
+
+                    selectedSample = getSelectedSample(d.data, timestamp);
+
+                    return d.data.label + " " + selectedSample.value + " " + d.data.units;
+                }
+
+                return d.data.label;
+            })
+            .attr("font-size", function (d) {
+                if("samples" in d.data){
+                    return 18;
+                }
+                return 18;
+            });
+
+        d3root.selectAll("g.label")
+            .each(insertBoxToLabel);
+
+        resizeBox(d3root.selectAll("g.label").selectAll("rect"));
+
+        // move them to the default label radius
+
+        // with all the translate coordinates
+        // fix overlapping issues
+        moveAllLabels(d3root, timestamp);
+    }
+
+    function createSvgLabelGroups(d3root, data){
+        var labelGroups;
+
+        labelGroups = d3root.selectAll("g.labels")
             .selectAll("g.label")
             .data(data)
             .enter()
@@ -584,7 +562,7 @@ function HealthGraph(groups, w, className){
             });
 
 
-        return groups;
+        return labelGroups;
     }
 
     function createSvgLabelTexts(d3root){
@@ -600,10 +578,8 @@ function HealthGraph(groups, w, className){
                 "text-anchor": "middle",
                 "x": 0,
                 "y": 0,
-                "font-size": 12,
                 "fill": "grey"
-            })
-            .each(insertBoxToLabel);
+            });
 
         return textElements;
     }
@@ -630,6 +606,40 @@ function HealthGraph(groups, w, className){
      * begin the main code
      */
 
+    // Here we begin to build the hGraph instance
+    // all the functions used are inside this scope.
+
+    // TODO: adjust depending on the number of healthMeasurements along with the zoom and font size
+
+    // Other options
+    var outerRadius = w * 0.4; // check a scale function from d3
+    var innerRadius = w * 0.3;
+    var defaultLabelRadius = w * 0.45;
+
+    var groupLabelFontSize = 12;
+    var measurementLabelFontSize = 8;
+
+    var circleRadius = 5;
+
+    var padAngle = Math.PI / 256;
+
+    var numberOfMeasurementsInEachGroup = []; // how many healthMeasurements in each group
+
+    var svg;
+    var hGraph; // and SVG group
+
+    var arc;
+    var pie;
+
+    var measurementsDataset = [];
+    var measurementsDataObjects;
+
+    var polygonData = [];
+
+    var timestamp = 0;
+    var measurementsInEachGroup;
+    var zonesDataObjects;
+
     svg = createSVG(className, w);
     hGraph = createHGraph(svg);
 
@@ -637,11 +647,18 @@ function HealthGraph(groups, w, className){
         .innerRadius(innerRadius)
         .outerRadius(outerRadius);
 
-    pie = d3.layout.pie().sort(null); // no ordering to preserve the order from the data source
-
+    pie = d3.layout.pie()
+        .value(function (d) {
+            return d.measurements.length;
+        })
+        .sort(null); // no ordering to preserve the order from the data source
     pie.padAngle(padAngle);
 
-    createZones(hGraph, getMeasurementsInEachGroup(groups), pie, arc);
+    // measurementsInEachGroup = getMeasurementsInEachGroup(groups);
+
+    zonesDataObjects = pie(groups);
+
+    createZones(hGraph, zonesDataObjects, arc);
 
     // a pie chart for the measurements
 
@@ -701,7 +718,9 @@ function HealthGraph(groups, w, className){
     hGraph.append("g")
         .attr("class", "labels");
 
-    createSvgLabelGroups(hGraph, measurementsDataObjects);
+
+
+    createSvgLabelGroups(hGraph, measurementsDataObjects.concat(zonesDataObjects));
 
     // here we can call the update functions
     updatePolygon(hGraph, 0); // testing the methods
@@ -709,12 +728,13 @@ function HealthGraph(groups, w, className){
     updateLabels(hGraph, 0); // testing the labels
 
     // test the update action
+    /*
     setTimeout(function () {
         updatePolygon(hGraph, 1); // testing the methods
         updateMeasurements(hGraph, 1); // testing the methods
         updateLabels(hGraph, 1); // testing the labels
     }, 2000);
-
+    */
 
     /*
     // var labelData = [];

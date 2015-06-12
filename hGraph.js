@@ -561,6 +561,71 @@ function HealthGraph(groups, w, className){
             });
     }
 
+    function createSvgLabelGroups(d3root, data){
+        var groups;
+
+        groups = d3root.selectAll("g.labels")
+            .selectAll("g.label")
+            .data(data)
+            .enter()
+            .append("g")
+            .attr("class", "label");
+
+        createSvgLabelTexts(d3root);
+
+        // create the rectangle
+        createSvgLabelRectangles(d3root);
+
+        // move the text in front
+        d3root.selectAll("g.label")
+            .selectAll("text")
+            .each(function (d) {
+                d3.select(this).node().parentNode.appendChild(d3.select(this).node());
+            });
+
+
+        return groups;
+    }
+
+    function createSvgLabelTexts(d3root){
+        var textElements;
+
+        textElements = d3root.selectAll("g.label")
+            .append("text")
+            .text(function (d) {
+                // use the timestamp to fetch the value from the samples
+                return "";
+            })
+            .attr({
+                "text-anchor": "middle",
+                "x": 0,
+                "y": 0,
+                "font-size": 12,
+                "fill": "grey"
+            })
+            .each(insertBoxToLabel);
+
+        return textElements;
+    }
+
+    function createSvgLabelRectangles(d3root){
+        var rectangles;
+
+        rectangles = d3root.selectAll("g.label")
+            .append("rect")
+            .attr({
+                "vector-effect": "non-scaling-stroke",
+                "rx": 0.5,
+                "ry": 0.5,
+                // "fill": "#d5f5d5",
+                "fill": "white"
+            })
+            .attr("stroke", "grey")
+            .attr("stroke-width", 1);
+
+        return rectangles;
+    }
+
     /**
      * begin the main code
      */
@@ -636,71 +701,14 @@ function HealthGraph(groups, w, className){
     hGraph.append("g")
         .attr("class", "labels");
 
-    // create all the labels
-    hGraph.selectAll("g.labels")
-        .selectAll("g.label")
-        .data(measurementsDataObjects)
-        .enter()
-        .append("g")
-        .attr("class", "label");
-
-    // create the text
-    hGraph.selectAll("g.label")
-        .append("text")
-        .text(function (d) {
-            // use the timestamp to fetch the value from the samples
-            return "";
-        })
-        .attr({
-            "text-anchor": "middle",
-            "x": 0,
-            "y": 0,
-            "font-size": 12,
-            "fill": "grey"
-        })
-        .each(insertBoxToLabel);
-
-    // create the rectangle
-    hGraph.selectAll("g.label")
-        .append("rect")
-        .attr("x", function(d){
-            return d.box.x;
-        })
-        .attr("y", function (d) {
-            return d.box.y;
-        })
-        .attr("height", function (d) {
-            return d.box.height;
-        })
-        .attr("width", function (d) {
-            return d.box.width;
-        })
-        .attr({
-            "vector-effect": "non-scaling-stroke",
-            "rx": 0.5,
-            "ry": 0.5,
-            // "fill": "#d5f5d5",
-            "fill": "white"
-        })
-        .attr("stroke", "grey")
-        .attr("stroke-width", 1);
-
-    // move the text in front
-    hGraph.selectAll("g.label")
-        .selectAll("text")
-        .each(function (d) {
-            d3.select(this).node().parentNode.appendChild(d3.select(this).node());
-        });
-
-
-
+    createSvgLabelGroups(hGraph, measurementsDataObjects);
 
     // here we can call the update functions
     updatePolygon(hGraph, 0); // testing the methods
     updateMeasurements(hGraph, 0); // testing the methods
     updateLabels(hGraph, 0); // testing the labels
 
-
+    // test the update action
     setTimeout(function () {
         updatePolygon(hGraph, 1); // testing the methods
         updateMeasurements(hGraph, 1); // testing the methods
@@ -843,7 +851,7 @@ function HealthGraph(groups, w, className){
     // polygon.attr("transform", scale + " " + rotate);
     // move the hGraph
 
-    var translate = "translate(" + (w * 0.5) + ", " + (w * 0.5) + ")";
+    var translate = "translate(" + (w * 1) + ", " + (w * 0.55) + ")";
     hGraph.attr("transform", translate);
 
 }

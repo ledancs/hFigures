@@ -266,17 +266,17 @@ function HealthGraph(groups, w, className){
     }
 
     // how to update the polygon
-    function updatePolygon(timestamp){
+    function updatePolygon(d3root, timestamp){
         polygonData = [];
 
-        hGraph.selectAll("g.activeGraph")
+        d3root.selectAll("g.activeGraph")
             .selectAll("g.measurement")
             .each(function (d) {
                 polygonData.push(getArc(d.data, timestamp).centroid(d));
             });
 
 
-        hGraph.selectAll("g.activeGraph")
+        d3root.selectAll("g.activeGraph")
             .selectAll("g.polygon")
             .selectAll("polygon")
             .data(function () {
@@ -290,8 +290,8 @@ function HealthGraph(groups, w, className){
     }
 
     // how to update the circles
-    function updateMeasurements(timestamp){
-        hGraph.selectAll("g.activeGraph")
+    function updateMeasurements(d3root, timestamp){
+        d3root.selectAll("g.activeGraph")
             .selectAll("g.measurement")
             .selectAll("circle")
             .transition()
@@ -346,27 +346,60 @@ function HealthGraph(groups, w, className){
 
     // get the arc object to calculate the centroid for the labels
     // this one needs to check the largest radius to avoid overlaps with the circles
-    function getLabelArc(d3graphs, label, defaultRadius){
+    function getLabelArc(d3graphs, label, defaultRadius, timestamp){
         var arc;
+        var radius = defaultRadius; // the default to start comparing
+        var margin = 30;
+
+        // TODO: now this function is doing two things, finding the largest radius and returning the arc
+
+        d3graphs.selectAll("g.measurements")
+            .selectAll("g.measurement")
+            .filter(function (d) {
+                return d.data.label === label;
+            })
+            .each(function (d) {
+                // console.log("checking radius for label " + d.data.label);
+                radius = Math.max(radius, getRadius(d.data, timestamp) + margin);
+
+            });
+
 
         arc = d3.svg.arc()
-            .innerRadius(defaultRadius)
-            .outerRadius(defaultRadius);
+            .innerRadius(radius)
+            .outerRadius(radius);
 
         return arc;
     }
 
+    // move the labels outside the calculated radius
+    function moveLabelHorizontally(d){
+        var offset;
+        var angle = d.startAngle + (d.endAngle - d.startAngle)/2; // preserve the previous angle to complete the circle
+
+        offset = d.box.width/2;
+
+        // clockwise the 12 o'clock is 0 and 6 o'clock is PI
+
+        offset *= (angle <= Math.PI) ? 1 : -1;
+
+        return offset;
+    }
+
     // get the final x and y for the label groups
-    function getLabelTranslateCorrdinates(d3graphs, label, defaultRadius){
+    function getLabelTranslateCoordinates(d, d3graphs, defaultRadius, timestamp){
+        var arc;
+        var coordinates;
 
         // get the max radius from all the measurements plotted that have the same label
-
+        arc = getLabelArc(d3graphs, d.data.label, defaultRadius, timestamp);
+        coordinates = arc.centroid(d);
         // move the labels horizontally outside the radius (x)
-
+        coordinates[0] = coordinates[0] + moveLabelHorizontally(d);
         // move the labels vertically to avoid overlapping (y)
 
         //return the final [x, y]
-
+        return coordinates;
 
     }
 
@@ -483,6 +516,51 @@ function HealthGraph(groups, w, className){
         return circles;
     }
 
+    function insertBoxToLabel(d){
+        // IMPORTANT: we need to add here the size of the text for the rectangle's dimensions!
+        d.box = this.getBBox();
+        d.box.x -= 5;
+        d.box.width += 10;
+        d.box.y -= 2;
+        d.box.height += 4;
+    }
+
+    function resizeBox(d3labelRectangles){
+        d3labelRectangles.attr("x", function(d){
+                return d.box.x;
+            })
+            .attr("y", function (d) {
+                return d.box.y;
+            })
+            .attr("height", function (d) {
+                return d.box.height;
+            })
+            .attr("width", function (d) {
+                return d.box.width;
+            })
+    }
+
+    // update the label text
+    function updateLabels(d3root, timestamp) {
+        d3root.selectAll("g.label")
+            .selectAll("text")
+            .text(function (d) {
+                // TODO: use the timestamp to update the text
+                return d.data.label;
+            })
+            .each(insertBoxToLabel);
+
+        resizeBox(d3root.selectAll("g.label").selectAll("rect"));
+        // move them to the default label radius
+        d3root.selectAll("g.label")
+            .transition()
+            .attr("transform", function (d) {
+                return "translate (" +
+                    getLabelTranslateCoordinates(d, d3root.selectAll("g.graph"), defaultLabelRadius, timestamp).join(",") +
+                    ")";
+            });
+    }
+
     /**
      * begin the main code
      */
@@ -571,7 +649,7 @@ function HealthGraph(groups, w, className){
         .append("text")
         .text(function (d) {
             // use the timestamp to fetch the value from the samples
-            return d.data.label;
+            return "";
         })
         .attr({
             "text-anchor": "middle",
@@ -580,16 +658,13 @@ function HealthGraph(groups, w, className){
             "font-size": 12,
             "fill": "grey"
         })
-        .each(function(d){
-            // IMPORTANT: we need to add here the size of the text for the rectangle's dimensions!
-            d.box = this.getBBox();
-        });
+        .each(insertBoxToLabel);
 
     // create the rectangle
     hGraph.selectAll("g.label")
         .append("rect")
         .attr("x", function(d){
-            return d.box.x - 10;
+            return d.box.x;
         })
         .attr("y", function (d) {
             return d.box.y;
@@ -598,7 +673,7 @@ function HealthGraph(groups, w, className){
             return d.box.height;
         })
         .attr("width", function (d) {
-            return d.box.width + 20;
+            return d.box.width;
         })
         .attr({
             "vector-effect": "non-scaling-stroke",
@@ -617,33 +692,21 @@ function HealthGraph(groups, w, className){
             d3.select(this).node().parentNode.appendChild(d3.select(this).node());
         });
 
-    // move them to the default label radius
-    hGraph.selectAll("g.label")
-        .transition()
-        .attr("transform", function (d) {
 
-            // TODO: call the wrapper routine that calculates the final coordinates of the labels
-
-            return "translate (" +
-                getLabelArc(
-                    hGraph.selectAll("g.graphs"),
-                    d.data.label,
-                    defaultLabelRadius)
-                    .centroid(d).join(",") +
-                ")";
-        });
 
 
     // here we can call the update functions
-    updatePolygon(0); // testing the methods
-    updateMeasurements(0); // testing the methods
+    updatePolygon(hGraph, 0); // testing the methods
+    updateMeasurements(hGraph, 0); // testing the methods
+    updateLabels(hGraph, 0); // testing the labels
 
-    /*
+
     setTimeout(function () {
-        updatePolygon(1); // testing the methods
-        updateMeasurements(1); // testing the methods
+        updatePolygon(hGraph, 1); // testing the methods
+        updateMeasurements(hGraph, 1); // testing the methods
+        updateLabels(hGraph, 1); // testing the labels
     }, 2000);
-    */
+
 
     /*
     // var labelData = [];

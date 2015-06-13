@@ -106,6 +106,9 @@ function HealthGraph(groups, w, className){
             group = dataset[i];
             measurements = group.measurements;
             total = total.concat(measurements);
+            total.push({
+                label: "empty"
+            });
         }
 
         return total;
@@ -674,50 +677,80 @@ function HealthGraph(groups, w, className){
         .innerRadius(innerRadius)
         .outerRadius(outerRadius);
 
-    pie = d3.layout.pie()
-        .value(function (d) {
-            return d.measurements.length;
-        })
-        .sort(null); // no ordering to preserve the order from the data source
-    pie.padAngle(padAngle);
-
-    // measurementsInEachGroup = getMeasurementsInEachGroup(groups);
-
-    zonesDataObjects = pie(groups);
-
-    createZones(hGraph, zonesDataObjects, arc);
-
     // a pie chart for the measurements
 
     pie = d3.layout.pie()
         .value(function (d) {
-            // all the measurements will have the same space of the donut 
-            return 1;
+            // all the measurements will have the same space of the donut
+            if(d.label === "empty")
+                return 1;
+            return 2;
         })
         .sort(null); // no ordering to preserve the order from the data source
 
-    pie.padAngle(padAngle);
+    // pie.padAngle(padAngle);
 
-    measurementsDataObjects = pie(getAllMeasurementsFromDataset(groups));
+    measurementsDataset = getAllMeasurementsFromDataset(groups);
+    measurementsDataObjects = pie(measurementsDataset);
+    console.log(measurementsDataObjects);
 
-
-    // TODO: fix the offset with the angle pad take the number of measurements in each group
-
-    /*
-    hGraph.selectAll("path.measurementArc")
+    hGraph.append("g")
+        .attr("class", "arcs")
+        .selectAll("path.arc")
         .data(measurementsDataObjects)
         .enter()
         .append("path")
+        .attr("fill", function (d) {
+            return (d.data.label === "empty")? "none" : "#D4ECD5";
+        })
+        .attr("stroke", function (d) {
+            return (d.data.label === "empty")? "none" : "grey";
+        })
         .attr({
             "class": "measurementArc",
-            "fill": "none",
             //"stroke": "#74c476",
-            "stroke": "grey",
             "stroke-width": .75,
-            "opacity": 0.3,
             "d": arc
     });
-    */
+
+    var startAngle;
+    var endAngle;
+    var groupIndex = 0;
+    var firstMeasurementOfGroup = true;
+    var groupDataObjects = [];
+
+    for(var i = 0; i < measurementsDataObjects.length; i ++){
+
+        if(firstMeasurementOfGroup){
+            startAngle = measurementsDataObjects[i].startAngle;
+            firstMeasurementOfGroup = false;
+        }
+
+
+        if(measurementsDataObjects[i].data.label === "empty"){
+            endAngle = measurementsDataObjects[i].endAngle;
+            firstMeasurementOfGroup = true;
+
+            groupDataObjects.push({
+                "startAngle": startAngle,
+                "endAngle": endAngle,
+                "padAngle": 0,
+                "data": groups[groupIndex]
+            });
+
+            groupIndex++;
+        }
+    }
+
+    // measurementsDataObjects need to exclude the empty sections
+    for(var i = measurementsDataObjects.length - 1; i > -1; i--){
+
+        if(measurementsDataObjects[i].data.label === "empty"){
+            measurementsDataObjects.splice(i, 1);
+        }
+    }
+
+
 
     // create the graph container
     hGraph.append("g")
@@ -771,8 +804,10 @@ function HealthGraph(groups, w, className){
         .attr("class", "labels");
 
 
+    //measurementsDataObjects.concat(zonesDataObjects)
 
-    createSvgLabelGroups(hGraph, measurementsDataObjects.concat(zonesDataObjects))
+
+    createSvgLabelGroups(hGraph, measurementsDataObjects.concat(groupDataObjects))
         .on("mouseover", function(d) {
             d3.select(this).select('text')
                 .attr("fill", "black");

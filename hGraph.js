@@ -87,10 +87,10 @@ function HealthGraph(groups, w, className){
             .attr("class", "arc")
             .append("path")
             .attr({
-                "fill": "#74c476",
+                "fill": "#D4ECD5",
                 //"stroke": "#74c476",
                 "stroke": "none",
-                "opacity": 0.3,
+                // "opacity": 0.3,
                 "d": arcFunction
             });
 
@@ -313,7 +313,7 @@ function HealthGraph(groups, w, className){
             });*/
 
         // move the labels vertically to avoid overlapping (y)
-        console.log( d.data.label + " " + d.box.height );
+        // console.log( d.data.label + " " + d.box.height );
 
         coordinates[1] = coordinates[1] + moveLabelVertically(i, angle, d.box.height, y);
 
@@ -549,7 +549,7 @@ function HealthGraph(groups, w, className){
             })
             .attr("font-size", function (d) {
                 if("samples" in d.data){
-                    return 12;
+                    return 16;
                 }
                 return 32;
             });
@@ -718,7 +718,7 @@ function HealthGraph(groups, w, className){
             "d": arc
     });
     */
-    
+
     // create the graph container
     hGraph.append("g")
         .attr("class", "graphs");
@@ -738,6 +738,12 @@ function HealthGraph(groups, w, className){
     createSvgMeasurementGroups(hGraph.selectAll("g.measurements"), measurementsDataObjects)
         .each(function (d) {
             polygonData.push([0, 0]);
+        })
+        .on("mouseover", function() {
+            console.log("mouse on");
+        })
+        .on("mouseout", function() {
+            console.log("mouse out");
         });
 
     // create the circles in each of the SVG group with the class "measurement"
@@ -766,7 +772,22 @@ function HealthGraph(groups, w, className){
 
 
 
-    createSvgLabelGroups(hGraph, measurementsDataObjects.concat(zonesDataObjects));
+    createSvgLabelGroups(hGraph, measurementsDataObjects.concat(zonesDataObjects))
+        .on("mouseover", function(d) {
+            d3.select(this).select('text')
+                .attr("fill", "black");
+            d3.select(this).select('rect')
+                .attr("stroke", "black")
+                .attr("fill", "ivory");
+
+        })
+        .on("mouseout", function(d) {
+            d3.select(this).select('text')
+                .attr("fill", "grey");
+            d3.select(this).select('rect')
+                .attr("stroke", "grey")
+                .attr("fill", "none");
+        });
 
     // here we can call the update functions
     updatePolygon(hGraph, 0); // testing the methods

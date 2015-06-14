@@ -439,9 +439,16 @@ function HealthGraph(groups, w, className){
 
     function insertBoxToLabel(d){
         // IMPORTANT: we need to add here the size of the text for the rectangle's dimensions!
-        d.box = this.getBBox();
-        d.box.x -= 5;
-        d.box.width += 10;
+        var box = this.getBBox();
+
+        d.box = {};
+
+        d.box.x = box.x - 5;
+        d.box.width = box.width + 10;
+
+        d.box.y = box.y;
+        d.box.height = box.height;
+
         // d.box.y -= 2;
         // d.box.height += 4;
     }

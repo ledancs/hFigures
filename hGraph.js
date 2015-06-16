@@ -235,6 +235,23 @@ function HealthGraph(groups, w, className){
         return radius;
     }
 
+    function getMaxRadiusForMeasurement(d3root, timestamp, label){
+        var radius = 0; // the default to start comparing
+
+        d3root.selectAll("g.measurements")
+            .selectAll("g.measurement")
+            .filter(function (d) {
+                return d.data.label === label;
+            })
+            .each(function (d) {
+                // console.log("checking radius for label " + d.data.label);
+                radius = Math.max(radius, getRadius(d.data, timestamp));
+
+            });
+
+        return radius;
+    }
+
     function getMaxRadiusForGroupLabel(defaultRadius){
 
         // TODO: determine the radius using the measurements that might overlap with this label
@@ -294,12 +311,7 @@ function HealthGraph(groups, w, className){
         arc = getLabelArc(d3root, d, defaultRadius, timestamp);
         coordinates = arc.centroid(d);
 
-        // IMPORTANT: add to the datum the x1 and y1 for the line
-        d.line = {};
-        d.line.x1 = coordinates[0];
-        d.line.y1 = coordinates[1];
-
-            // move the labels horizontally outside the radius (x)
+        // move the labels horizontally outside the radius (x)
         coordinates[0] = coordinates[0] + moveLabelHorizontally(d, angle);
 
         y = coordinates[1] - d.box.height *.8;
@@ -462,6 +474,15 @@ function HealthGraph(groups, w, className){
         // d.box.height += 4;
     }
 
+    function insertOffset(d){
+        // IMPORTANT: we need to add here the size of the text for the rectangle's dimensions!
+
+        d.offset = {};
+
+        d.offset.x = 0;
+        d.offset.y = 0;
+    }
+
     function resizeBox(d3labelRectangles){
         d3labelRectangles.attr("x", function(d){
                 return d.box.x;
@@ -526,11 +547,6 @@ function HealthGraph(groups, w, className){
             .transition()
             .attr("transform", function (d, i) {
                 var coordinates = getLabelCoordinates(d, i, d3root, defaultLabelRadius, timestamp);
-
-                // IMPORTANT: we also add to the datum of the label data objects the delta(x, y)
-                d.line.x2 = coordinates[0];
-                d.line.y2 = coordinates[1];
-
                 return "translate (" + coordinates.join(",") + ")";
             });
 
@@ -557,12 +573,12 @@ function HealthGraph(groups, w, className){
 
     // update the label text
     function updateLabels(d3root, timestamp) {
-        var labelDeltas;
 
         updateLabelText(d3root, timestamp);
 
         d3root.selectAll("g.label")
-            .each(insertBoxToLabel);
+            .each(insertBoxToLabel)
+            .each(insertOffset);
 
         resizeBox(d3root.selectAll("g.label").selectAll("rect"));
 
@@ -571,22 +587,25 @@ function HealthGraph(groups, w, className){
         // with all the translate coordinates
         // fix overlapping issues
         moveAllLabels(d3root, timestamp);
-        // update the x1 and y1 of the lines
-        // then using the circles update the x2 and y2
-        // draw the line
+
+        // now the lines
+        updateLabelLine(d3root, timestamp);
+
+    }
+
+    function updateLabelLine(d3root, timestamp){
+        var lineData = [];
+
+        var lineFunction = d3.svg.line()
+            .x(function(d) { return d.x; })
+            .y(function(d) { return d.y; })
+            .interpolate("linear");
+
+        // TODO: subtract the deltas in the label groups with the measurement groups
 
         d3root.selectAll("g.label")
-            .each(function (d) {
-                console.log(d.line);
-            });
-
-        /*d3root.selectAll("g.label")
-            .selectAll("line")
-            .attr("x1", function (d) { d.line.x1; })
-            .attr("y1", function (d) { d.line.y1; })
-            .attr("x2", function (d) { d.line.x2; })
-            .attr("y2", function (d) { d.line.y2; });*/
-
+            .selectAll("path")
+            .attr("d", lineFunction(lineData));
     }
 
     function updateLabelText(d3root, timestamp){
@@ -623,13 +642,14 @@ function HealthGraph(groups, w, className){
             .append("g")
             .attr("class", "label");
 
+        // create the lines
+        createSvgLines(d3root);
+
         createSvgLabelTexts(d3root);
 
         // create the rectangle
         createSvgLabelRectangles(d3root);
 
-        // create the lines
-        createSvgLines(d3root);
 
         // move the text in front of the rectangles
         d3root.selectAll("g.label")
@@ -639,6 +659,7 @@ function HealthGraph(groups, w, className){
             });
 
 
+
         return labelGroups;
     }
 
@@ -646,14 +667,15 @@ function HealthGraph(groups, w, className){
         var lines;
 
         lines = d3root.selectAll("g.label")
-            .append("line")
+            .append("path")
             .attr({
                 "vector-effect": "non-scaling-stroke",
                 // "fill": "#d5f5d5",
-                "stroke-dasharray": "5, 5"
-            })
-            .attr("stroke", "grey")
-            .attr("stroke-width", 1);
+                "stroke-dasharray": "5, 5",
+                "fill": "none",
+                "stroke": "grey",
+                "stroke-width": 1
+            });
 
         return lines;
     }
@@ -888,11 +910,11 @@ function HealthGraph(groups, w, className){
     // test the update action
 
 
-    /*setTimeout(function () {
+    setTimeout(function () {
         updatePolygon(hGraph, 1); // testing the methods
         updateMeasurements(hGraph, 1); // testing the methods
         updateLabels(hGraph, 1); // testing the labels
-    }, 3000);*/
+    }, 3000);
 
     // flip the y axis
     // var scale = "scale(1, -1)";

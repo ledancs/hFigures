@@ -74,24 +74,27 @@ function HealthGraph(groups, w, className){
         return total;
     }
 
-    function createZones(d3target, dataset, arcFunction){
+    function createZones(d3target, measurementsDataObjects, arc){
 
         var zones;
 
         zones = d3target.append("g")
             .attr("class", "arcs")
-            .selectAll("g.arc")
-            .data(dataset)
+            .selectAll("path.arc")
+            .data(measurementsDataObjects)
             .enter()
-            .append("g")
-            .attr("class", "arc")
             .append("path")
+            .attr("fill", function (d) {
+                return (d.data.label === "empty")? "none" : "#D4ECD5";
+            })
+            .attr("stroke", function (d) {
+                return (d.data.label === "empty")? "none" : "grey";
+            })
             .attr({
-                "fill": "#D4ECD5",
+                "class": "measurementArc",
                 //"stroke": "#74c476",
-                "stroke": "none",
-                // "opacity": 0.3,
-                "d": arcFunction
+                "stroke-width": .75,
+                "d": arc
             });
 
         return zones;
@@ -286,11 +289,17 @@ function HealthGraph(groups, w, className){
         var angle = d.startAngle + (d.endAngle - d.startAngle)/2; // preserve the previous angle to complete the circle
 
         // get the max radius from all the measurements plotted that have the same label
+        // we can already add this to the datum
+
         arc = getLabelArc(d3root, d, defaultRadius, timestamp);
         coordinates = arc.centroid(d);
 
+        // IMPORTANT: add to the datum the x1 and y1 for the line
+        d.line = {};
+        d.line.x1 = coordinates[0];
+        d.line.y1 = coordinates[1];
 
-        // move the labels horizontally outside the radius (x)
+            // move the labels horizontally outside the radius (x)
         coordinates[0] = coordinates[0] + moveLabelHorizontally(d, angle);
 
         y = coordinates[1] - d.box.height *.8;
@@ -509,8 +518,6 @@ function HealthGraph(groups, w, className){
 
     function moveLabels(d3root, anglePosition, sortFunction, timestamp){
 
-        var coordinates;
-
         verticalLabelLimit = 0;
 
         d3root.selectAll("g.label")
@@ -518,14 +525,21 @@ function HealthGraph(groups, w, className){
             .sort(sortFunction)
             .transition()
             .attr("transform", function (d, i) {
+                var coordinates = getLabelCoordinates(d, i, d3root, defaultLabelRadius, timestamp);
 
-                coordinates = getLabelCoordinates(d, i, d3root, defaultLabelRadius, timestamp);
+                // IMPORTANT: we also add to the datum of the label data objects the delta(x, y)
+                d.line.x2 = coordinates[0];
+                d.line.y2 = coordinates[1];
 
                 return "translate (" + coordinates.join(",") + ")";
             });
+
+
     }
 
     function moveAllLabels(d3root, timestamp){
+
+
         // upper right corner
         moveLabels(d3root, angleUpperRight, descending, timestamp);
 
@@ -538,10 +552,44 @@ function HealthGraph(groups, w, className){
         // lower left corner
         moveLabels(d3root, angleLowerLeft, descending, timestamp);
 
+
     }
 
     // update the label text
     function updateLabels(d3root, timestamp) {
+        var labelDeltas;
+
+        updateLabelText(d3root, timestamp);
+
+        d3root.selectAll("g.label")
+            .each(insertBoxToLabel);
+
+        resizeBox(d3root.selectAll("g.label").selectAll("rect"));
+
+        // move them to the default label radius
+
+        // with all the translate coordinates
+        // fix overlapping issues
+        moveAllLabels(d3root, timestamp);
+        // update the x1 and y1 of the lines
+        // then using the circles update the x2 and y2
+        // draw the line
+
+        d3root.selectAll("g.label")
+            .each(function (d) {
+                console.log(d.line);
+            });
+
+        /*d3root.selectAll("g.label")
+            .selectAll("line")
+            .attr("x1", function (d) { d.line.x1; })
+            .attr("y1", function (d) { d.line.y1; })
+            .attr("x2", function (d) { d.line.x2; })
+            .attr("y2", function (d) { d.line.y2; });*/
+
+    }
+
+    function updateLabelText(d3root, timestamp){
         var selectedSample;
 
         d3root.selectAll("g.label")
@@ -559,21 +607,10 @@ function HealthGraph(groups, w, className){
             })
             .attr("font-size", function (d) {
                 if("samples" in d.data){
-                    return 16;
+                    return measurementLabelFontSize;
                 }
-                return 32;
+                return groupLabelFontSize;
             });
-
-        d3root.selectAll("g.label")
-            .each(insertBoxToLabel);
-
-        resizeBox(d3root.selectAll("g.label").selectAll("rect"));
-
-        // move them to the default label radius
-
-        // with all the translate coordinates
-        // fix overlapping issues
-        moveAllLabels(d3root, timestamp);
     }
 
     function createSvgLabelGroups(d3root, data){
@@ -591,7 +628,10 @@ function HealthGraph(groups, w, className){
         // create the rectangle
         createSvgLabelRectangles(d3root);
 
-        // move the text in front
+        // create the lines
+        createSvgLines(d3root);
+
+        // move the text in front of the rectangles
         d3root.selectAll("g.label")
             .selectAll("text")
             .each(function (d) {
@@ -600,6 +640,22 @@ function HealthGraph(groups, w, className){
 
 
         return labelGroups;
+    }
+
+    function createSvgLines(d3root){
+        var lines;
+
+        lines = d3root.selectAll("g.label")
+            .append("line")
+            .attr({
+                "vector-effect": "non-scaling-stroke",
+                // "fill": "#d5f5d5",
+                "stroke-dasharray": "5, 5"
+            })
+            .attr("stroke", "grey")
+            .attr("stroke-width", 1);
+
+        return lines;
     }
 
     function createSvgLabelTexts(d3root){
@@ -639,6 +695,38 @@ function HealthGraph(groups, w, className){
         return rectangles;
     }
 
+    function createGroupDataObjects(groups, measurementsDataObjects){
+        var startAngle;
+        var endAngle;
+        var groupIndex = 0;
+        var firstMeasurementOfGroup = true;
+        var groupDataObjects = [];
+
+        for(var i = 0; i < measurementsDataObjects.length; i ++){
+
+            if(firstMeasurementOfGroup){
+                startAngle = measurementsDataObjects[i].startAngle;
+                firstMeasurementOfGroup = false;
+            }
+
+
+            if(measurementsDataObjects[i].data.label === "empty"){
+                endAngle = measurementsDataObjects[i].endAngle;
+                firstMeasurementOfGroup = true;
+
+                groupDataObjects.push({
+                    "startAngle": startAngle,
+                    "endAngle": endAngle,
+                    "padAngle": 0,
+                    "data": groups[groupIndex]
+                });
+
+                groupIndex++;
+            }
+        }
+        return groupDataObjects;
+    }
+
     /**
      * begin the main code
      */
@@ -653,14 +741,10 @@ function HealthGraph(groups, w, className){
     var innerRadius = w * 0.3;
     var defaultLabelRadius = w * 0.45;
 
-    var groupLabelFontSize = 12;
-    var measurementLabelFontSize = 8;
+    var groupLabelFontSize = 32;
+    var measurementLabelFontSize = 16;
 
     var circleRadius = 5;
-
-    var padAngle = Math.PI / 128;
-
-    var numberOfMeasurementsInEachGroup = []; // how many healthMeasurements in each group
 
     var svg;
     var hGraph; // and SVG group
@@ -668,14 +752,15 @@ function HealthGraph(groups, w, className){
     var arc;
     var pie;
 
-    var measurementsDataset = [];
     var measurementsDataObjects;
+    var measurementsDataset;
 
     var polygonData = [];
 
     var timestamp = 0;
-    var measurementsInEachGroup;
-    var zonesDataObjects;
+
+    var groupDataObjects;
+    var labelDataObjects;
 
     svg = createSVG(className, w);
     hGraph = createHGraph(svg);
@@ -699,55 +784,11 @@ function HealthGraph(groups, w, className){
 
     measurementsDataset = getAllMeasurementsFromDataset(groups);
     measurementsDataObjects = pie(measurementsDataset);
-    console.log(measurementsDataObjects);
+    // console.log(measurementsDataObjects);
 
-    hGraph.append("g")
-        .attr("class", "arcs")
-        .selectAll("path.arc")
-        .data(measurementsDataObjects)
-        .enter()
-        .append("path")
-        .attr("fill", function (d) {
-            return (d.data.label === "empty")? "none" : "#D4ECD5";
-        })
-        .attr("stroke", function (d) {
-            return (d.data.label === "empty")? "none" : "grey";
-        })
-        .attr({
-            "class": "measurementArc",
-            //"stroke": "#74c476",
-            "stroke-width": .75,
-            "d": arc
-    });
+    createZones(hGraph, measurementsDataObjects, arc);
 
-    var startAngle;
-    var endAngle;
-    var groupIndex = 0;
-    var firstMeasurementOfGroup = true;
-    var groupDataObjects = [];
-
-    for(var i = 0; i < measurementsDataObjects.length; i ++){
-
-        if(firstMeasurementOfGroup){
-            startAngle = measurementsDataObjects[i].startAngle;
-            firstMeasurementOfGroup = false;
-        }
-
-
-        if(measurementsDataObjects[i].data.label === "empty"){
-            endAngle = measurementsDataObjects[i].endAngle;
-            firstMeasurementOfGroup = true;
-
-            groupDataObjects.push({
-                "startAngle": startAngle,
-                "endAngle": endAngle,
-                "padAngle": 0,
-                "data": groups[groupIndex]
-            });
-
-            groupIndex++;
-        }
-    }
+    groupDataObjects = createGroupDataObjects(groups, measurementsDataObjects);
 
     // measurementsDataObjects need to exclude the empty sections
     for(var i = measurementsDataObjects.length - 1; i > -1; i--){
@@ -777,6 +818,7 @@ function HealthGraph(groups, w, className){
     // create the measurement groups
     createSvgMeasurementGroups(hGraph.selectAll("g.measurements"), measurementsDataObjects)
         .each(function (d) {
+            // allows the polygon animation from the center
             polygonData.push([0, 0]);
         })
         .on("mouseover", function() {
@@ -813,8 +855,9 @@ function HealthGraph(groups, w, className){
 
     //measurementsDataObjects.concat(zonesDataObjects)
 
+    labelDataObjects = measurementsDataObjects.concat(groupDataObjects);
 
-    createSvgLabelGroups(hGraph, measurementsDataObjects.concat(groupDataObjects))
+    createSvgLabelGroups(hGraph, labelDataObjects)
         .on("mouseover", function(d) {
             d3.select(this).select('text')
                 .attr("fill", "black");
@@ -831,6 +874,12 @@ function HealthGraph(groups, w, className){
                 .attr("fill", "none");
         });
 
+    // move the graphs container to the front
+    hGraph.selectAll("g.graphs")
+        .each(function () {
+            d3.select(this).node().parentNode.appendChild(d3.select(this).node());
+        });
+
     // here we can call the update functions
     updatePolygon(hGraph, 0); // testing the methods
     updateMeasurements(hGraph, 0); // testing the methods
@@ -838,135 +887,12 @@ function HealthGraph(groups, w, className){
 
     // test the update action
 
-    setTimeout(function () {
+
+    /*setTimeout(function () {
         updatePolygon(hGraph, 1); // testing the methods
         updateMeasurements(hGraph, 1); // testing the methods
         updateLabels(hGraph, 1); // testing the labels
-    }, 3000);
-
-
-    /*
-    // var labelData = [];
-    // var healthMeasurements = []; // hGraph healthMeasurements
-    // var pieAngleData = []; // an array to save the start, pad and end angles of each section
-
-    arcs.append("path")
-        .attr({
-            "fill": "#74c476",
-            //"stroke": "#74c476",
-            "stroke": "none",
-            "opacity": 0.3,
-            "d": arc
-        })
-        .each(function (d) {
-
-
-
-            pieAngleData.push({
-                startAngle: d.startAngle,
-                padAngle: d.padAngle,
-                endAngle: d.endAngle
-            })
-
-
-
-        });
-
-
-    var groupHealthMeasurementLabel;
-    var groupOfMeasurements;
-    var dataMeasurements;
-    var pieData;
-    var middleAngle;
-
-    for(var i = 0; i < groupedMeasurements.length; i ++) {
-
-        groupOfMeasurements = groupedMeasurements[i];
-
-        dataMeasurements = groupOfMeasurements.healthMeasurements;
-
-        pieData = pieAngleData[i];
-        middleAngle = getAngleCenter(pieData.startAngle, pieData.endAngle, pieData.padAngle);
-
-        groupHealthMeasurementLabel = {
-            "label": groupOfMeasurements.label,
-            "text": groupOfMeasurements.label,
-            "fontSize": groupLabelFontSize,
-            "angle": middleAngle,
-            "r0": outerRadius,
-            "r1": defaultLabelRadius,
-            "r": 0,
-            "lineColor": "#74c476",
-            "lineWidth": 3,
-            "className": "groupLabel"
-        };
-
-        // push it to the array of health measurement labels
-        labelData.push(groupHealthMeasurementLabel);
-
-
-        healthMeasurements = healthMeasurements.concat(
-            this.createHealthMeasurementsFromDataGroup(
-                dataMeasurements,
-                pieData.startAngle,
-                pieData.endAngle,
-                innerRadius,
-                outerRadius,
-                measurementCircleRadius,
-                groupedMeasurements.label
-            )
-        );
-
-
-
-    }
-
-    // assign the values of the instance
-    this.hGraphWrapper = hGraphWrapper;
-    this.healthMeasurements = healthMeasurements;
-    // now the labels
-    var healthMeasurementLabel;
-
-    for(var i = 0; i < healthMeasurements.length; i ++){
-        var m = healthMeasurements[i],
-            text = m.label + ": " + m.samples[m.sample].value + " " + m.units,
-            r1 = Math.max(m.radius + 20, defaultLabelRadius);
-
-        healthMeasurementLabel = {
-            "label": m.label,
-            "text": text,
-            "fontSize": measurementLabelFontSize,
-            "angle": m.angle,
-            "r0": m.radius,
-            "r1": r1,
-            "r": measurementCircleRadius,
-            "lineColor": "#5b5b5b",
-            "lineWidth": 1,
-            "className": "measurementLabel"
-        };
-
-        // push it to the array of health measurement labels
-        labelData.push(healthMeasurementLabel);
-    }
-    // an svg group containing all the labels
-    this.labelGroupContainer = hGraphD3Group.append("g").attr("class", "labels");
-    // append a group for each label containing the label, the frame and the line to the circle
-    // call the function that build all the labels and adjusts for any collision
-    this.labelData = labelData;
-    var self = this;
-    this.mouseHighlight(self.plotLabels(labelData));
-    this.defaultLabelRadius = defaultLabelRadius;
-
-    hGraphD3Group.append("g").attr("class", "graphs"); // a group to hold all the graphs
-    // render the polygon and the circles
-    this.graphs = this.hGraphWrapper.select("g.hGraph").select("g.graphs");
-
-    var graph = this.renderPolygonAndCircles(healthMeasurements);
-
-    this.graphs.node().appendChild(graph.node());
-    var hCircles = graph.selectAll("circle");
-    this.mouseHighlight(hCircles);
-    */
+    }, 3000);*/
 
     // flip the y axis
     // var scale = "scale(1, -1)";

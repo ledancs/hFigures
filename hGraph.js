@@ -547,6 +547,8 @@ function HealthGraph(groups, w, className){
             .transition()
             .attr("transform", function (d, i) {
                 var coordinates = getLabelCoordinates(d, i, d3root, defaultLabelRadius, timestamp);
+                d.offset.x = coordinates[0];
+                d.offset.y = coordinates[1];
                 return "translate (" + coordinates.join(",") + ")";
             });
 

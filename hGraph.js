@@ -428,7 +428,7 @@ function HealthGraph(groups, w, className){
             .data(data)
             .enter()
             .append("g")
-            .attr("class", "measurement");
+            .attr("class", "measurement sector");
 
         return svgGroups;
 
@@ -582,6 +582,11 @@ function HealthGraph(groups, w, className){
             .selectAll("g.label")
             .transition()
             .attr("transform", function (d) {
+
+                // this could leave space for the group labels when a certain angle has been detected to belong to a group label
+                moveLabelVertically(i, d.startAngle + (d.endAngle - d.startAngle)/2, 20, d.box.y);
+                i++;
+
                 var coordinates = getLabelCoordinates(d, i, timestamp);
                 // console.log(i + " : " + d.data.label + ": " + coordinates.join(","));
                 i++;
@@ -881,6 +886,12 @@ function HealthGraph(groups, w, className){
 
     createZones(hGraph, measurementsObjects, arc);
 
+    hGraph.append("g")
+        .attr("class", "groupLabels")
+        .append("g")
+        .attr("class", "groupLabel sector");
+
+
     // measurementsDataObjects need to exclude the empty sections
     measurementsObjects = measurementsObjects.filter(function (d) {
         return d.data.label != "empty";
@@ -919,6 +930,14 @@ function HealthGraph(groups, w, className){
     updatePolygon(hGraph, 0); // testing the methods
     updateMeasurements(hGraph, 0); // testing the methods
     updateLabels(hGraph, 0);
+
+
+    hGraph.selectAll("g.sector")
+        .each(function(d){
+           console.log( "" +
+               d3.select(this).attr("class")
+           );
+        });
 
     // test the update action
 

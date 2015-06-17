@@ -583,7 +583,7 @@ function HealthGraph(groups, w, className){
             .transition()
             .attr("transform", function (d) {
                 var coordinates = getLabelCoordinates(d, i, timestamp);
-                console.log(i + " : " + d.data.label + ": " + coordinates.join(","));
+                // console.log(i + " : " + d.data.label + ": " + coordinates.join(","));
                 i++;
                 return "translate (" + coordinates.join(",") + ")";
             });
@@ -649,6 +649,9 @@ function HealthGraph(groups, w, className){
                 var measurementRadius;
                 var measurementCoordinates;
                 var arc;
+                var labelOffset = {};
+                labelOffset.x = 0;
+                labelOffset.y = 0;
 
                 measurementRadius = getRadius(d.data, timestamp);
 
@@ -663,9 +666,15 @@ function HealthGraph(groups, w, className){
                     "y": measurementCoordinates[1]
                 });
 
+                labelOffset.x = d.startAngle < Math.PI ? -1: 1;
+                labelOffset.x *= d.box.width * 0.49;
+
+
+                labelOffset.y -= d.box.height * 0.35;
+
                 lineData.push({
-                    "x": d.offset.x,
-                    "y": d.offset.y
+                    "x": d.offset.x + labelOffset.x,
+                    "y": d.offset.y + labelOffset.y
                 });
 
                 return lineFunction(lineData);

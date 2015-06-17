@@ -32,7 +32,7 @@ function d3zoom(className){
     }
 
     var zoom = d3.behavior.zoom()
-        .scaleExtent([0.75, 3])
+        .scaleExtent([.5, 3])
         .on("zoom", zoomed);
 
     var svg = d3.select("div." + className)

@@ -285,18 +285,18 @@ function HealthGraph(groups, w, className){
             upper = angle >= 3/2 * Math.PI || angle <= Math.PI/2;
 
         var collision = upper ?
-        y + height + verticalLabelMargin >= verticalLabelLimit :
-        y <= verticalLabelLimit;
+            (y + height + verticalLabelMargin) >= verticalLabelLimit :
+            y <= verticalLabelLimit;
 
         if(collision && i > 0)
             delta = upper ?
-            verticalLabelLimit - (y + height + verticalLabelMargin) : // negative to move it up
-            verticalLabelLimit - y; // positive to move it down
+                verticalLabelLimit - (y + height + verticalLabelMargin) : // negative to move it up
+                verticalLabelLimit - y; // positive to move it down
 
 
         verticalLabelLimit = upper ?
-        y + delta :
-        y + height + verticalLabelMargin + delta; // add the height and the margin plus possible delta
+            y + delta :
+            y + height + verticalLabelMargin + delta; // add the height and the margin plus possible delta
 
         return delta;
 
@@ -325,10 +325,10 @@ function HealthGraph(groups, w, className){
         // move the labels horizontally outside the radius (x)
         coordinates[0] = coordinates[0] + moveLabelHorizontally(d, angle);
 
-        y = coordinates[1] - d.box.height *.8;
+        y = coordinates[1] - d.box.height *.825;
 
         /*
-        d3root.append("circle")
+        hGraph.append("circle")
             .attr("cx", coordinates[0])
             .attr("cy", y)
             .attr({
@@ -338,7 +338,7 @@ function HealthGraph(groups, w, className){
             });
 
 
-        d3root.append("circle")
+        hGraph.append("circle")
             .attr("cx", coordinates[0])
             // .attr("cy", coordinates[1] + d.box.height *.2)
             .attr("cy", y + d.box.height)
@@ -521,9 +521,6 @@ function HealthGraph(groups, w, className){
     }
 
     function ascending (a, b) {
-
-        console.log(a.data.label + " " + getAngle(a) + " - " + b.data.label + " " + getAngle(b));
-
         var angleA = getAngle(a);
         var angleB = getAngle(b);
 
@@ -531,9 +528,6 @@ function HealthGraph(groups, w, className){
     }
 
     function descending (a, b) {
-
-        console.log(a.data.label + " " + getAngle(a) + " - " + b.data.label + " " + getAngle(b));
-
         var angleA = getAngle(a);
         var angleB = getAngle(b);
 
@@ -568,7 +562,7 @@ function HealthGraph(groups, w, className){
     }
 
     function moveLabels(d3root, anglePosition, sortFunction, timestamp){
-
+        var i = 0; // variable i from d3 does not work for this case
         verticalLabelLimit = 0;
         /**
          * http://stackoverflow.com/questions/13203897/d3-nested-appends-and-data-flow
@@ -582,13 +576,15 @@ function HealthGraph(groups, w, className){
         // unless we restore the order after the new coordinates have been computed
 
         d3root
-            .selectAll("g.measurement g.label")
+            .selectAll("g.measurement")
             .filter(anglePosition)
             .sort(sortFunction)
+            .selectAll("g.label")
             .transition()
-            .attr("transform", function (d, i) {
+            .attr("transform", function (d) {
                 var coordinates = getLabelCoordinates(d, i, timestamp);
-                // console.log(d.data.label + ": " + coordinates.join(","));
+                console.log(i + " : " + d.data.label + ": " + coordinates.join(","));
+                i++;
                 return "translate (" + coordinates.join(",") + ")";
             });
     }
@@ -600,15 +596,16 @@ function HealthGraph(groups, w, className){
         moveLabels(d3root, angleUpperRight, descending, timestamp);
 
         // upper left corner
-        // moveLabels(d3root, angleUpperLeft, ascending, timestamp);
+        moveLabels(d3root, angleUpperLeft, ascending, timestamp);
 
         // lower right corner
-        // moveLabels(d3root, angleLowerRight, ascending, timestamp);
+        moveLabels(d3root, angleLowerRight, ascending, timestamp);
 
         // lower left corner
-        // moveLabels(d3root, angleLowerLeft, descending, timestamp);
+        moveLabels(d3root, angleLowerLeft, descending, timestamp);
 
-
+        d3root.selectAll("g.measurement")
+            .sort(ascending);
     }
 
     // update the label text
@@ -617,8 +614,7 @@ function HealthGraph(groups, w, className){
         updateLabelText(d3root, timestamp);
 
 
-        d3root.selectAll("g.measurement")
-            .selectAll("g.label")
+        d3root.selectAll("g.measurement g.label text")
             .each(insertBoxToLabel)
             .each(insertOffset);
 
@@ -917,13 +913,13 @@ function HealthGraph(groups, w, className){
 
     // test the update action
 
-    /*
+
     setTimeout(function () {
         updatePolygon(hGraph, 1); // testing the methods
         updateMeasurements(hGraph, 1); // testing the methods
         updateLabels(hGraph, 1);
     }, 3000);
-    */
+
     // flip the y axis
     // var scale = "scale(1, -1)";
     // rotate

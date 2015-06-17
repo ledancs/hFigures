@@ -483,8 +483,10 @@ function HealthGraph(groups, w, className){
         d.offset.y = 0;
     }
 
-    function resizeBox(d3labelRectangles){
-        d3labelRectangles.attr("x", function(d){
+    function resizeBox(d3root){
+        d3root.selectAll("g.label")
+            .selectAll("rect")
+            .attr("x", function(d){
                 return d.box.x;
             })
             .attr("y", function (d) {
@@ -547,8 +549,6 @@ function HealthGraph(groups, w, className){
             .transition()
             .attr("transform", function (d, i) {
                 var coordinates = getLabelCoordinates(d, i, d3root, defaultLabelRadius, timestamp);
-                d.offset.x = coordinates[0];
-                d.offset.y = coordinates[1];
                 return "translate (" + coordinates.join(",") + ")";
             });
 
@@ -579,10 +579,9 @@ function HealthGraph(groups, w, className){
         updateLabelText(d3root, timestamp);
 
         d3root.selectAll("g.label")
-            .each(insertBoxToLabel)
-            .each(insertOffset);
+            .each(insertBoxToLabel);
 
-        resizeBox(d3root.selectAll("g.label").selectAll("rect"));
+        resizeBox(d3root);
 
         // move them to the default label radius
 
@@ -596,18 +595,33 @@ function HealthGraph(groups, w, className){
     }
 
     function updateLabelLine(d3root, timestamp){
-        var lineData = [];
 
         var lineFunction = d3.svg.line()
-            .x(function(d) { return d.x; })
-            .y(function(d) { return d.y; })
+            .x(function(d) { return d.pathX; })
+            .y(function(d) { return d.pathY; })
             .interpolate("linear");
 
         // TODO: subtract the deltas in the label groups with the measurement groups
 
         d3root.selectAll("g.label")
             .selectAll("path")
-            .attr("d", lineFunction(lineData));
+            .transition()
+            .attr("d", function(d){
+                var lineData = [];
+
+                lineData.push({
+                    "pathX": 0,
+                    "pathY": 0
+                });
+
+                lineData.push({
+                    "pathX": 5,
+                    "pathY": 5
+                });
+
+                return lineFunction(lineData);
+
+            });
     }
 
     function updateLabelText(d3root, timestamp){

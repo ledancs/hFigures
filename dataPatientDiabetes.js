@@ -409,7 +409,7 @@ var groups = [
             },
 			{
                 min: 75,
-                max: 85,
+                max: 100,
                 yellow_min: 74,
                 red_min: 50,
                 units: "%",

@@ -107,7 +107,7 @@ function HealthGraph(groups, w, className){
     }
 
     // how to update the polygon
-    function updatePolygon(d3root, timestamp){
+    function updatePolygon(d3root, timestamp, polygon){
         polygonData = [];
 
         d3root.selectAll("g.activeGraph")
@@ -116,26 +116,13 @@ function HealthGraph(groups, w, className){
                 polygonData.push(getArc(d.data, timestamp).centroid(d));
             });
 
-
-        d3root.selectAll("g.activeGraph")
-            .selectAll("g.polygon")
-            .selectAll("polygon")
-            .data(function () {
-                return [polygonData];
-            })
-            .transition()
-            .attr("points", function(d) {
-                // compute the coordinates
-                return [d].join(" ");
-            });
+        polygon.transition()
+            .attr("points", [polygonData].join(" "));
     }
 
     // how to update the circles
-    function updateMeasurements(d3root, timestamp){
-        d3root.selectAll("g.activeGraph")
-            .selectAll("g.measurement")
-            .selectAll("circle")
-            .transition()
+    function updateMeasurements(circles, timestamp){
+        circles.transition()
             .attr("cx", function (d) {
                 return getArc(d.data, timestamp).centroid(d)[0];
             })
@@ -143,7 +130,7 @@ function HealthGraph(groups, w, className){
                 return getArc(d.data, timestamp).centroid(d)[1];
             })
             .attr("fill", function (d) {
-                return getColor(d.data, timestamp);
+                return getColor(d.data, timestamp, d3.select(this).attr("class"));
             });
     }
 
@@ -353,7 +340,7 @@ function HealthGraph(groups, w, className){
         return timestamp;
     }
 
-    function getColor(measurement, timestamp){
+    function getColor(measurement, timestamp, className){
         var color = "white"; // by default
         var yellowMin = "yellow_min";
         var yellowMax = "yellow_max";
@@ -364,6 +351,10 @@ function HealthGraph(groups, w, className){
         var sample;
         var index;
 
+        var yellow = className === "active" ? "gold": "#FFEF99";
+        var red = className === "active" ? "tomato": "#FFC1B5";
+        var green = className === "active" ? "#73D651": "#9DE285";
+
 
         index = getSampleIndex(timestamp, samples);
         sample = measurement.samples[index];
@@ -372,33 +363,33 @@ function HealthGraph(groups, w, className){
         if (typeof measurement[yellowMin] != 'undefined'){
             hasAdditionalRanges = true;
             if(sample.value <= measurement[yellowMin]){
-                color = "gold";
+                color = yellow;
             }
         }
 
         if (typeof measurement[redMin] != 'undefined'){
             hasAdditionalRanges = true;
             if(sample.value <= measurement[redMin]){
-                color = "tomato";
+                color = red;
             }
         }
         // checking for more than the recommended
         if (typeof measurement[yellowMax] != 'undefined'){
             hasAdditionalRanges = true;
             if(sample.value >= measurement[yellowMax]){
-                color = "gold";
+                color = yellow;
             }
         }
 
         if (typeof measurement[redMax] != 'undefined'){
             hasAdditionalRanges = true;
             if(sample.value >= measurement[redMax]){
-                color = "tomato";
+                color = red;
             }
         }
 
         if (hasAdditionalRanges && color === "white"){
-            color = "#73D651";
+            color = green;
         }
 
         return color;
@@ -418,33 +409,26 @@ function HealthGraph(groups, w, className){
 
     }
 
-    function createSvgPolygon(d3root, data){
-        var polygonGroup;
+    function createSvgPolygon(d3root, data, className){
+        var polygon;
 
-        polygonGroup = d3root.selectAll("g.activeGraph")
-            .append("g")
-            .attr("class", "polygon")
-            .selectAll("polygon")
-            .data(function () {
-                return [data];
-            })
-            .enter()
+        polygon = d3root.selectAll("g.polygons")
             .append("polygon")
-            .attr("points", function(d) {
-                // compute the coordinates
-                return d.join(" ");
-            }).attr({
-                "stroke": "#5b5b5b",
+            .attr("points", [data].join(" ")).attr({
                 "stroke-width": 1,
                 "fill": "none",
                 // "fill-opacity": 0.15,
-                "vector-effect": "non-scaling-stroke"
-            });
+                "vector-effect": "non-scaling-stroke",
+                "class": className
+            })
+            .attr("stroke", className === "active" ? "#5b5b5b": "#BFBFBF");
 
-        return polygonGroup;
+        // previous color #5b5b5b
+
+        return polygon;
     }
 
-    function createMeasurementCircles(d3root, circleRadius){
+    function createMeasurementCircles(d3root, circleRadius, className){
         var circles;
 
         circles = d3root.selectAll("g.measurement")
@@ -455,8 +439,11 @@ function HealthGraph(groups, w, className){
                 "fill": "white",
                 "r": circleRadius,
                 "cx": 0,
-                "cy": 0
-            });
+                "cy": 0,
+                "class": className
+            })
+            .attr("stroke", className === "active" ? "#5b5b5b": "#BFBFBF");;
+
 
         return circles;
     }
@@ -578,10 +565,10 @@ function HealthGraph(groups, w, className){
 
 
                 if(searchResult > -1){
-                    console.log(d.data.label + ": " + angle);
+                    // console.log(d.data.label + ": " + angle);
                     coordinates = getLabelCoordinates(d, i, timestamp);
                 } else{
-                    console.log("* " + d.data.label + ": " + angle);
+                    // console.log("* " + d.data.label + ": " + angle);
                     coordinates = getGroupLabelCoordinates(d, i, timestamp);
                 }
 
@@ -837,6 +824,24 @@ function HealthGraph(groups, w, className){
         return groupDataObjects;
     }
 
+    function plotAt(d3root, timestamp){
+        var polygon;
+        var circles;
+
+        polygon = createSvgPolygon(hGraph, initialPolygonData, "passive");
+
+        circles = createMeasurementCircles(d3root, circleRadius, "passive");
+
+        d3root.selectAll("circle.active")
+            .each(function (d) {
+                this.parentNode.appendChild(this);
+            });
+
+        updatePolygon(d3root, timestamp, polygon);
+
+        updateMeasurements(circles, timestamp);
+    }
+
     /**
      * begin the main code
      */
@@ -867,6 +872,9 @@ function HealthGraph(groups, w, className){
     var groupsObjects;
 
     var polygonData = [];
+    var initialPolygonData = [];
+    var activePolygon;
+    var activeCircles;
 
     var timestamp = 0;
 
@@ -901,6 +909,13 @@ function HealthGraph(groups, w, className){
         return d.data.label != "empty";
     });
 
+    // create a polygon
+    for(var i = 0; i < measurementsObjects.length; i ++){
+        initialPolygonData.push([0, 0]);
+    }
+
+    polygonData = initialPolygonData;
+
     hGraph.append("g")
         .attr("class", "groupLabels");
 
@@ -921,12 +936,11 @@ function HealthGraph(groups, w, className){
         .append("g")
         .attr("class", "graph activeGraph");
 
+    hGraph.selectAll("g.activeGraph")
+        .append("g")
+        .attr("class", "polygons");
 
-    // create a polygon
-    for(var i = 0; i < measurementsObjects.length; i ++)
-        polygonData.push([0, 0]);
-
-    createSvgPolygon(hGraph, polygonData);
+    activePolygon = createSvgPolygon(hGraph, polygonData, "active");
 
     hGraph.selectAll("g.activeGraph")
         .append("g")
@@ -939,11 +953,11 @@ function HealthGraph(groups, w, className){
     // label groups and required elements
     createSvgLabelGroups(hGraph);
     // create the circles in each of the SVG group with the class "measurement"
-    createMeasurementCircles(hGraph, circleRadius);
+    activeCircles = createMeasurementCircles(hGraph, circleRadius, "active");
 
     // here we can call the update functions
-    updatePolygon(hGraph, 0); // testing the methods
-    updateMeasurements(hGraph, 0); // testing the methods
+    updatePolygon(hGraph, 0, activePolygon); // testing the methods
+    updateMeasurements(activeCircles, 0); // testing the methods
     updateLabels(hGraph, 0);
 
     // test the update action
@@ -973,12 +987,17 @@ function HealthGraph(groups, w, className){
     return {
 
         "update": function (timestamp) {
-            updatePolygon(hGraph, timestamp);
-            updateMeasurements(hGraph, timestamp);
+            updatePolygon(hGraph, timestamp, activePolygon);
+            updateMeasurements(activeCircles, timestamp);
             updateLabels(hGraph, timestamp);
+
         },
 
-        "hGraph": hGraph
+        "hGraph": hGraph,
+
+        "plotAt": function (timestamp) {
+            plotAt(hGraph, timestamp);
+        }
     }
 
 }

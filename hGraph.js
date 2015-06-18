@@ -77,8 +77,8 @@ function HealthGraph(groups, w, className){
             })
             .attr({
                 "class": "measurementArc",
-                //"stroke": "#74c476",
-                "stroke-width": .75,
+                // "stroke": "#74c476",
+                // "stroke-width": .75,
                 "d": arc
             });
 
@@ -202,7 +202,7 @@ function HealthGraph(groups, w, className){
 
     // move the labels so they do not overlap
     var verticalLabelLimit = 0;
-    var verticalLabelMargin = 2;
+    var verticalLabelMargin = 5;
     function moveLabelVertically(i, angle, height, y){
 
         var delta = i === 0 ? -1 * verticalLabelMargin: 0,
@@ -272,6 +272,42 @@ function HealthGraph(groups, w, className){
                 "stroke": "none"
             });
         */
+
+        // move the labels vertically to avoid overlapping (y)
+        // console.log( d.data.label + " " + d.box.height );
+
+        coordinates[1] = coordinates[1] + moveLabelVertically(i, angle, d.box.height, y);
+
+        d.offset.x = coordinates[0];
+        d.offset.y = coordinates[1];
+
+        //return the [x, y] coordinates
+        return coordinates;
+    }
+
+    function getGroupLabelCoordinates(d, i, timestamp){
+        var marginLabelMeasurement = 50;
+        var arc;
+        var measurementRadius;
+        var finalRadius;
+        var coordinates;
+        var y;
+        var angle = d.startAngle + (d.endAngle - d.startAngle)/2; // preserve the previous angle to complete the circle
+
+        // measurementRadius = getRadius(d.data, timestamp);
+
+        // finalRadius = Math.max(measurementRadius + marginLabelMeasurement, defaultLabelRadius);
+
+        arc = d3.svg.arc()
+            .innerRadius(defaultLabelRadius)
+            .outerRadius(defaultLabelRadius);
+
+        coordinates = arc.centroid(d);
+
+        // move the labels horizontally outside the radius (x)
+        coordinates[0] = coordinates[0] + moveLabelHorizontally(d, angle);
+
+        y = coordinates[1] - d.box.height *.825;
 
         // move the labels vertically to avoid overlapping (y)
         // console.log( d.data.label + " " + d.box.height );
@@ -427,7 +463,7 @@ function HealthGraph(groups, w, className){
     }
 
     function resizeBox(d3root){
-        d3root.selectAll("g.measurement")
+        d3root.selectAll("g.hasLabel")
             .selectAll("g.label")
             .selectAll("rect")
             .attr("x", function(d){
@@ -503,7 +539,7 @@ function HealthGraph(groups, w, className){
         // unless we restore the order after the new coordinates have been computed
 
         d3root
-            .selectAll("g.sector")
+            .selectAll("g.hasLabel")
             .filter(anglePosition)
             .sort(sortFunction)
             .selectAll("g.label")
@@ -514,12 +550,14 @@ function HealthGraph(groups, w, className){
                 var searchResult = className.search("measurement");
                 if(searchResult > -1)
                     coordinates = getLabelCoordinates(d, i, timestamp);
+                else
+                    coordinates = getGroupLabelCoordinates(d, i, timestamp);
                 i++;
                 return "translate (" + coordinates.join(",") + ")";
             });
     }
 
-    function moveAllLabels(d3root, timestamp){
+    function moveLabelsWrapper(d3root, timestamp){
 
         // upper right corner
         moveLabels(d3root, angleUpperRight, descending, timestamp);
@@ -542,11 +580,14 @@ function HealthGraph(groups, w, className){
 
         updateLabelText(d3root, timestamp);
 
+        d3root.selectAll("g.groupLabel g.label text")
+            .text(function (d) {
+                return d.data.label;
+            });
 
-        d3root.selectAll("g.measurement g.label text")
+        d3root.selectAll("g.hasLabel g.label text")
             .each(insertBoxToLabel)
             .each(insertOffset);
-
 
         resizeBox(d3root);
 
@@ -554,10 +595,16 @@ function HealthGraph(groups, w, className){
 
         // with all the translate coordinates
         // fix overlapping issues
-        moveAllLabels(d3root, timestamp);
+        moveLabelsWrapper(d3root, timestamp);
 
         // now the lines
         updateLabelLine(d3root, timestamp);
+
+        // put the groups back into their container
+        d3root.selectAll("g.groupLabel")
+            .each(function (d) {
+                d3.select("g.groupLabels").node().appendChild(this);
+            });
 
     }
 
@@ -618,21 +665,8 @@ function HealthGraph(groups, w, className){
             .selectAll("g.label")
             .selectAll("text")
             .text(function (d) {
-
-                if("samples" in d.data){
-
-                    selectedSample = getSelectedSample(d.data, timestamp);
-
-                    return d.data.label + " " + selectedSample.value + " " + d.data.units;
-                }
-
-                return d.data.label;
-            })
-            .attr("font-size", function (d) {
-                if("samples" in d.data){
-                    return measurementLabelFontSize;
-                }
-                return groupLabelFontSize;
+                selectedSample = getSelectedSample(d.data, timestamp);
+                return d.data.label + " " + selectedSample.value + " " + d.data.units;
             });
     }
 
@@ -642,7 +676,7 @@ function HealthGraph(groups, w, className){
         // create the lines
         createSvgLabelLines(d3root);
 
-        labelGroups = d3root.selectAll("g.measurement")
+        labelGroups = d3root.selectAll("g.hasLabel")
             .append("g")
             .attr("class", "label");
 
@@ -653,7 +687,7 @@ function HealthGraph(groups, w, className){
 
 
         // move the text in front of the rectangles
-        d3root.selectAll("g.measurement")
+        d3root.selectAll("g.hasLabel")
             .selectAll("g.label")
             .selectAll("text")
             .each(function (d) {
@@ -686,7 +720,7 @@ function HealthGraph(groups, w, className){
     function createSvgLabelTexts(d3root){
         var textElements;
 
-        textElements = d3root.selectAll("g.measurement")
+        textElements = d3root.selectAll("g.hasLabel")
             .selectAll("g.label")
             .append("text")
             .text(function (d) {
@@ -698,6 +732,11 @@ function HealthGraph(groups, w, className){
                 "x": 0,
                 "y": 0,
                 "fill": "grey"
+            })
+            .attr("font-size", function (d) {
+                var className = d3.select(this.parentNode.parentNode).attr("class");
+                var searchResult = className.search("measurement");
+                return searchResult > -1? measurementLabelFontSize: groupLabelFontSize;
             });
 
         return textElements;
@@ -706,7 +745,7 @@ function HealthGraph(groups, w, className){
     function createSvgLabelRectangles(d3root){
         var rectangles;
 
-        rectangles = d3root.selectAll("g.measurement")
+        rectangles = d3root.selectAll("g.hasLabel")
             .selectAll("g.label")
             .append("rect")
             .attr({
@@ -770,7 +809,7 @@ function HealthGraph(groups, w, className){
     var innerRadius = w * 0.3;
     var defaultLabelRadius = w * 0.45;
 
-    var groupLabelFontSize = 32;
+    var groupLabelFontSize = 36;
     var measurementLabelFontSize = 16;
 
     var circleRadius = 5;
@@ -815,8 +854,6 @@ function HealthGraph(groups, w, className){
 
     groupsObjects = createGroupLabelDataObjects(groups, measurementsObjects);
 
-    for(var i = 0; i < groupsObjects.length; i ++)
-        console.log(groupsObjects[i]);
 
     hGraph.append("g")
         .attr("class", "groupLabels");
@@ -869,24 +906,13 @@ function HealthGraph(groups, w, className){
     updateMeasurements(hGraph, 0); // testing the methods
     updateLabels(hGraph, 0);
 
-    /*
-    hGraph.selectAll("g.sector")
-        .each(function(d){
-           console.log( "" +
-               d3.select(this).attr("class")
-           );
-        });
-    */
-
     // test the update action
 
-    /*
     setTimeout(function () {
         updatePolygon(hGraph, 1); // testing the methods
         updateMeasurements(hGraph, 1); // testing the methods
         updateLabels(hGraph, 1);
     }, 3000);
-    */
 
     // flip the y axis
     // var scale = "scale(1, -1)";

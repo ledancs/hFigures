@@ -352,7 +352,7 @@ function HealthGraph(groups, w, className){
             .data(data)
             .enter()
             .append("g")
-            .attr("class", "measurement sector");
+            .attr("class", "measurement hasLabel");
 
         return svgGroups;
 
@@ -826,7 +826,7 @@ function HealthGraph(groups, w, className){
         .data(groupsObjects)
         .enter()
         .append("g")
-        .attr("class", "groupLabel sector");
+        .attr("class", "groupLabel hasLabel");
 
 
     // measurementsDataObjects need to exclude the empty sections

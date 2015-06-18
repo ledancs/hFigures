@@ -849,7 +849,7 @@ function HealthGraph(groups, w, className){
     // Other options
     var outerRadius = w * 0.4; // check a scale function from d3
     var innerRadius = w * 0.3;
-    var defaultLabelRadius = w * 0.4;
+    var defaultLabelRadius = w * 0.45;
 
     var groupLabelFontSize = 36;
     var measurementLabelFontSize = 16;
@@ -947,13 +947,14 @@ function HealthGraph(groups, w, className){
     updateLabels(hGraph, 0);
 
     // test the update action
-
+    /*
     setTimeout(function () {
         updatePolygon(hGraph, 1); // testing the methods
         updateMeasurements(hGraph, 1); // testing the methods
         updateLabels(hGraph, 1);
     }, 3000);
-    
+    */
+
     // flip the y axis
     // var scale = "scale(1, -1)";
     // rotate
@@ -968,6 +969,17 @@ function HealthGraph(groups, w, className){
 
     var translate = "translate(" + (w * 1) + ", " + (w * 0.55) + ")";
     hGraph.attr("transform", translate);
+
+    return {
+
+        "update": function (timestamp) {
+            updatePolygon(hGraph, timestamp);
+            updateMeasurements(hGraph, timestamp);
+            updateLabels(hGraph, timestamp);
+        },
+
+        "hGraph": hGraph
+    }
 
 }
 

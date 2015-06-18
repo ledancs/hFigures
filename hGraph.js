@@ -287,20 +287,43 @@ function HealthGraph(groups, w, className){
 
     function getGroupLabelCoordinates(d, i, timestamp){
         var marginLabelMeasurement = 50;
+        var numberOfClosestMeasurementsToCheck = 3;
         var arc;
         var measurementRadius;
         var finalRadius;
         var coordinates;
         var y;
+        var closestMeasurement;
         var angle = d.startAngle + (d.endAngle - d.startAngle)/2; // preserve the previous angle to complete the circle
+
+        d.data.measurements.sort(function (a, b) {
+            var angleA = a.startAngle + (a.endAngle - a.startAngle)/2;
+            var angleB = b.startAngle + (b.endAngle - b.startAngle)/2;
+            var diffA = Math.abs(angleA - angle);
+            var diffB = Math.abs(angleB - angle);
+
+            return diffA - diffB;
+
+        });
+
+
+        // we need to get the measurement closer to this angle
+        // TODO: Check the n closest elements as long as there is n elements
+        for(var j = 0; j < Math.min(numberOfClosestMeasurementsToCheck, d.data.measurements.length); j++){
+            closestMeasurement = d.data.measurements[j].data;
+            measurementRadius = getRadius(closestMeasurement, timestamp);
+
+            finalRadius = Math.max(measurementRadius + marginLabelMeasurement, defaultLabelRadius);
+
+        }
 
         // measurementRadius = getRadius(d.data, timestamp);
 
         // finalRadius = Math.max(measurementRadius + marginLabelMeasurement, defaultLabelRadius);
 
         arc = d3.svg.arc()
-            .innerRadius(defaultLabelRadius)
-            .outerRadius(defaultLabelRadius);
+            .innerRadius(finalRadius)
+            .outerRadius(finalRadius);
 
         coordinates = arc.centroid(d);
 
@@ -320,6 +343,7 @@ function HealthGraph(groups, w, className){
         //return the [x, y] coordinates
         return coordinates;
     }
+
 
     // selects the sample closest to the timestamp provided but before that not after
     function getSampleIndex(timestamp, samples){
@@ -548,10 +572,19 @@ function HealthGraph(groups, w, className){
                 var coordinates = [];
                 var className = d3.select(this.parentNode).attr("class");
                 var searchResult = className.search("measurement");
-                if(searchResult > -1)
+
+                var angle =d.startAngle + (d.endAngle - d.startAngle)/2;
+
+
+
+                if(searchResult > -1){
+                    console.log(d.data.label + ": " + angle);
                     coordinates = getLabelCoordinates(d, i, timestamp);
-                else
+                } else{
+                    console.log("* " + d.data.label + ": " + angle);
                     coordinates = getGroupLabelCoordinates(d, i, timestamp);
+                }
+
                 i++;
                 return "translate (" + coordinates.join(",") + ")";
             });
@@ -764,32 +797,41 @@ function HealthGraph(groups, w, className){
     // creates the data objects for the group labels
     function createGroupLabelDataObjects(groups, measurementsDataObjects){
 
-        var startAngle;
-        var endAngle;
+        var startAngle = 0;
+        var endAngle = 0;
         var groupIndex = 0;
         var firstMeasurementOfGroup = true;
         var groupDataObjects = [];
+        var measurementsDataObjectsArray = []; // holds the measurementsDataObjects of each group
+        var groupData = {};
 
         for(var i = 0; i < measurementsDataObjects.length; i ++){
+
+            // Only insert those that are not empty labels
+            if(measurementsDataObjects[i].data.label != "empty")
+                measurementsDataObjectsArray.push(measurementsDataObjects[i]);
 
             if(firstMeasurementOfGroup){
                 startAngle = measurementsDataObjects[i].startAngle;
                 firstMeasurementOfGroup = false;
             }
-
-
-            if(measurementsDataObjects[i].data.label === "empty"){
+            else if(measurementsDataObjects[i].data.label === "empty"){
                 endAngle = measurementsDataObjects[i].endAngle;
                 firstMeasurementOfGroup = true;
+
+                groupData.label = groups[groupIndex].label;
+                groupData.measurements = measurementsDataObjectsArray;
 
                 groupDataObjects.push({
                     "startAngle": startAngle,
                     "endAngle": endAngle,
                     "padAngle": 0,
-                    "data": groups[groupIndex]
+                    "data": groupData
                 });
 
                 groupIndex++;
+                groupData = {};
+                measurementsDataObjectsArray = [];
             }
         }
         return groupDataObjects;
@@ -807,7 +849,7 @@ function HealthGraph(groups, w, className){
     // Other options
     var outerRadius = w * 0.4; // check a scale function from d3
     var innerRadius = w * 0.3;
-    var defaultLabelRadius = w * 0.45;
+    var defaultLabelRadius = w * 0.4;
 
     var groupLabelFontSize = 36;
     var measurementLabelFontSize = 16;
@@ -854,6 +896,10 @@ function HealthGraph(groups, w, className){
 
     groupsObjects = createGroupLabelDataObjects(groups, measurementsObjects);
 
+    // measurementsDataObjects need to exclude the empty sections
+    measurementsObjects = measurementsObjects.filter(function (d) {
+        return d.data.label != "empty";
+    });
 
     hGraph.append("g")
         .attr("class", "groupLabels");
@@ -864,12 +910,6 @@ function HealthGraph(groups, w, className){
         .enter()
         .append("g")
         .attr("class", "groupLabel hasLabel");
-
-
-    // measurementsDataObjects need to exclude the empty sections
-    measurementsObjects = measurementsObjects.filter(function (d) {
-        return d.data.label != "empty";
-    });
 
 
     // create the graph container
@@ -913,7 +953,7 @@ function HealthGraph(groups, w, className){
         updateMeasurements(hGraph, 1); // testing the methods
         updateLabels(hGraph, 1);
     }, 3000);
-
+    
     // flip the y axis
     // var scale = "scale(1, -1)";
     // rotate

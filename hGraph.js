@@ -6,7 +6,6 @@
  *
  * @param groups
  * @param w
- * @param h
  * @param className
  * @constructor
  */
@@ -58,20 +57,6 @@ function HealthGraph(groups, w, className){
             .attr("class", "hGraph");
 
         return hGraph;
-    }
-
-    function getMeasurementsInEachGroup(dataset){
-        var group;
-        var total = [];
-        var measurements;
-
-        for(var i = 0; i < dataset.length; i ++){
-            group = dataset[i];
-            measurements = group.measurements;
-            total.push(measurements.length);
-        }
-
-        return total;
     }
 
     function createZones(d3target, measurementsDataObjects, arc){
@@ -200,67 +185,6 @@ function HealthGraph(groups, w, className){
         var index = getSampleIndex(timestamp, samples);
 
         return measurement.samples[index];
-    }
-
-    // get the arc object to calculate the centroid for the labels
-    // this one needs to check the largest radius to avoid overlaps with the circles
-    function getLabelArc(d3root, d, defaultRadius, timestamp){
-        var arc;
-        var radius;
-        var margin = 30;
-
-        if("samples" in d.data){
-            radius = getMaxRadiusForMeasurementLabel(d3root, timestamp, defaultRadius, d.data.label, margin);
-        } else {
-            radius = getMaxRadiusForGroupLabel(defaultRadius);
-        }
-
-        arc = d3.svg.arc()
-            .innerRadius(radius)
-            .outerRadius(radius);
-
-        return arc;
-    }
-
-    function getMaxRadiusForMeasurementLabel(d3root, timestamp, defaultRadius, label, margin){
-        var radius = defaultRadius; // the default to start comparing
-
-        d3root.selectAll("g.measurements")
-            .selectAll("g.measurement")
-            .filter(function (d) {
-                return d.data.label === label;
-            })
-            .each(function (d) {
-                // console.log("checking radius for label " + d.data.label);
-                radius = Math.max(radius, getRadius(d.data, timestamp) + margin);
-
-            });
-
-        return radius;
-    }
-
-    function getMaxRadiusForMeasurement(d3root, timestamp, label){
-        var radius = 0; // the default to start comparing
-
-        d3root.selectAll("g.measurements")
-            .selectAll("g.measurement")
-            .filter(function (d) {
-                return d.data.label === label;
-            })
-            .each(function (d) {
-                // console.log("checking radius for label " + d.data.label);
-                radius = Math.max(radius, getRadius(d.data, timestamp));
-
-            });
-
-        return radius;
-    }
-
-    function getMaxRadiusForGroupLabel(defaultRadius){
-
-        // TODO: determine the radius using the measurements that might overlap with this label
-
-        return defaultRadius;
     }
 
     // move the labels outside the calculated radius
@@ -562,8 +486,11 @@ function HealthGraph(groups, w, className){
     }
 
     function moveLabels(d3root, anglePosition, sortFunction, timestamp){
+
         var i = 0; // variable i from d3 does not work for this case
+
         verticalLabelLimit = 0;
+
         /**
          * http://stackoverflow.com/questions/13203897/d3-nested-appends-and-data-flow
          * https://github.com/mbostock/d3/wiki/Selections
@@ -576,26 +503,23 @@ function HealthGraph(groups, w, className){
         // unless we restore the order after the new coordinates have been computed
 
         d3root
-            .selectAll("g.measurement")
+            .selectAll("g.sector")
             .filter(anglePosition)
             .sort(sortFunction)
             .selectAll("g.label")
             .transition()
             .attr("transform", function (d) {
-
-                // this could leave space for the group labels when a certain angle has been detected to belong to a group label
-                moveLabelVertically(i, d.startAngle + (d.endAngle - d.startAngle)/2, 20, d.box.y);
-                i++;
-
-                var coordinates = getLabelCoordinates(d, i, timestamp);
-                // console.log(i + " : " + d.data.label + ": " + coordinates.join(","));
+                var coordinates = [];
+                var className = d3.select(this.parentNode).attr("class");
+                var searchResult = className.search("measurement");
+                if(searchResult > -1)
+                    coordinates = getLabelCoordinates(d, i, timestamp);
                 i++;
                 return "translate (" + coordinates.join(",") + ")";
             });
     }
 
     function moveAllLabels(d3root, timestamp){
-
 
         // upper right corner
         moveLabels(d3root, angleUpperRight, descending, timestamp);
@@ -798,7 +722,9 @@ function HealthGraph(groups, w, className){
         return rectangles;
     }
 
-    function createGroupDataObjects(groups, measurementsDataObjects){
+    // creates the data objects for the group labels
+    function createGroupLabelDataObjects(groups, measurementsDataObjects){
+
         var startAngle;
         var endAngle;
         var groupIndex = 0;
@@ -857,6 +783,7 @@ function HealthGraph(groups, w, className){
 
     var measurementsObjects;
     var measurementsArray;
+    var groupsObjects;
 
     var polygonData = [];
 
@@ -886,8 +813,18 @@ function HealthGraph(groups, w, className){
 
     createZones(hGraph, measurementsObjects, arc);
 
+    groupsObjects = createGroupLabelDataObjects(groups, measurementsObjects);
+
+    for(var i = 0; i < groupsObjects.length; i ++)
+        console.log(groupsObjects[i]);
+
     hGraph.append("g")
-        .attr("class", "groupLabels")
+        .attr("class", "groupLabels");
+
+    hGraph.selectAll("g.groupLabels")
+        .selectAll("g.groupLabel")
+        .data(groupsObjects)
+        .enter()
         .append("g")
         .attr("class", "groupLabel sector");
 
@@ -917,6 +854,7 @@ function HealthGraph(groups, w, className){
     hGraph.selectAll("g.activeGraph")
         .append("g")
         .attr("class", "measurements"); // wrapper for all measurements
+
     createSvgMeasurementGroups(hGraph, measurementsObjects); // create a svg group for each measurement
 
     //measurementsDataObjects.concat(zonesDataObjects)
@@ -931,22 +869,24 @@ function HealthGraph(groups, w, className){
     updateMeasurements(hGraph, 0); // testing the methods
     updateLabels(hGraph, 0);
 
-
+    /*
     hGraph.selectAll("g.sector")
         .each(function(d){
            console.log( "" +
                d3.select(this).attr("class")
            );
         });
+    */
 
     // test the update action
 
-
+    /*
     setTimeout(function () {
         updatePolygon(hGraph, 1); // testing the methods
         updateMeasurements(hGraph, 1); // testing the methods
         updateLabels(hGraph, 1);
     }, 3000);
+    */
 
     // flip the y axis
     // var scale = "scale(1, -1)";

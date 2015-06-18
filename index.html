@@ -3,8 +3,6 @@
 <head lang="en">
     <meta charset="utf-8">
     <title></title>
-    <script charset="utf-8" src="d3.min.js"></script>
-    <script charset="utf-8" src="dataPatientDiabetes.js"></script>
     <style type="text/css">
         body {
             font-family: sans-serif;
@@ -40,35 +38,43 @@
 </head>
 <body>
 
+<script charset="utf-8" src="d3.js"></script>
+<script charset="utf-8" src="dataPatientDiabetes.js"></script>
 <script src="hGraph.js" type="application/javascript"></script>
 <script src="apps/d3zoom/zoom.js" type="application/javascript"></script>
 <script type="text/javascript">
-    var w = 900;
+    var w = 1000;
     var className = "hGraph-container";
 
-    var hGraphInstance = new HealthGraph(groups, w, className); // from data.js
+    var hGraphInstance = HealthGraph(groups, w, className); // from data.js
 
     // render again with the new values
 
     // var oldGraph = hGraphInstance.interpolateSamplesAt(0);
     // oldGraph.attr("opacity", 0.55);
 
-    /*
-    document.addEventListener("keydown", keyDownTextField, false);
+
     function keyDownTextField(e) {
+
         var keyCode = e.keyCode;
+
         switch (keyCode){
+
             case 37:
                 // left arrow
-                hGraphInstance.plotSamplesAt(0);
+                hGraphInstance.update(0);
                 break;
+
             case 39:
-                hGraphInstance.plotSamplesAt(1);
                 // right arrow
+                hGraphInstance.update(1);
                 break;
         }
     }
-    */
+
+
+    document.addEventListener("keydown", keyDownTextField, false);
+
 
     // hGraphInstance.plotSamplesAt(0);
 

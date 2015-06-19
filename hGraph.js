@@ -593,6 +593,12 @@ function HealthGraph(groups, w, className){
 
         d3root.selectAll("g.measurement")
             .sort(ascending);
+
+        // put the groups back into their container
+        d3root.selectAll("g.groupLabel")
+            .each(function (d) {
+                d3.select("g.groupLabels").node().appendChild(this);
+            });
     }
 
     // update the label text
@@ -619,12 +625,6 @@ function HealthGraph(groups, w, className){
 
         // now the lines
         updateLabelLine(d3root, timestamp);
-
-        // put the groups back into their container
-        d3root.selectAll("g.groupLabel")
-            .each(function (d) {
-                d3.select("g.groupLabels").node().appendChild(this);
-            });
 
     }
 
@@ -840,6 +840,11 @@ function HealthGraph(groups, w, className){
         updatePolygon(d3root, timestamp, polygon);
 
         updateMeasurements(circles, timestamp);
+
+        // at the end of the day I only want to move the labels to the largest possible radii
+        // can we accomplish this only with the timestamp?
+
+        moveLabelsWrapper(d3root, timestamp);
     }
 
     /**
@@ -956,9 +961,9 @@ function HealthGraph(groups, w, className){
     activeCircles = createMeasurementCircles(hGraph, circleRadius, "active");
 
     // here we can call the update functions
-    updatePolygon(hGraph, 0, activePolygon); // testing the methods
-    updateMeasurements(activeCircles, 0); // testing the methods
-    updateLabels(hGraph, 0);
+    updatePolygon(hGraph, 1, activePolygon); // testing the methods
+    updateMeasurements(activeCircles, 1); // testing the methods
+    updateLabels(hGraph, 1);
 
     // test the update action
     /*

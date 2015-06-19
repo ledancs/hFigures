@@ -27,8 +27,8 @@
         div.hGraph-container {
             margin: 0;
             padding: 0;
-            height: 97%;
-            width: 97%;
+            height: 98.45%;
+            width: 99.45%;
             display: inline-block;
             position: absolute;
             vertical-align: middle;
@@ -47,11 +47,6 @@
     var className = "hGraph-container";
 
     var hGraphInstance = HealthGraph(groups, w, className); // from data.js
-
-    // render again with the new values
-
-    // var oldGraph = hGraphInstance.interpolateSamplesAt(0);
-    // oldGraph.attr("opacity", 0.55);
 
 
     function keyDownTextField(e) {
@@ -76,7 +71,9 @@
     document.addEventListener("keydown", keyDownTextField, false);
 
 
-    // hGraphInstance.plotSamplesAt(0);
+    setTimeout(function(){
+        hGraphInstance.plotAt(0);
+    }, 3000);
 
     // the className is needed to set the viewBox in the svg element inside the div container.
     d3zoom(className);

@@ -18,8 +18,8 @@ function d3zoom(className){
 
     function toggle(){
         zoomedIn = !zoomedIn;
-        svg.selectAll("g.measurement").selectAll("g.label").attr("opacity", zoomedIn ? 1: 0.5);
-        svg.selectAll("g.measurement").selectAll("path").attr("opacity", zoomedIn ? 1: 0.5);
+        svg.selectAll("g.measurement").selectAll("g.label").attr("opacity", zoomedIn ? 1: 0);
+        svg.selectAll("g.measurement").selectAll("path").attr("opacity", zoomedIn ? 1: 0);
 
         svg.selectAll("g.groupLabel").selectAll("g.label").attr("opacity", zoomedIn ? 0.5: 1);
     }
@@ -44,8 +44,8 @@ function d3zoom(className){
     svg.call(zoom);
 
     // show and hide
-    svg.selectAll("g.measurement").selectAll("g.label").attr("opacity", 0.5);
-    svg.selectAll("g.measurement").selectAll("path").attr("opacity", 0.5);
+    svg.selectAll("g.measurement").selectAll("g.label").attr("opacity", 0);
+    svg.selectAll("g.measurement").selectAll("path").attr("opacity", 0);
 
     svg.selectAll("g.groupLabel").selectAll("g.label").attr("opacity", 1);
 }

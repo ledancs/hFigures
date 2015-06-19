@@ -304,7 +304,7 @@ function HealthGraph(groups, w, className){
 
 
         // we need to get the measurement closer to this angle
-        // TODO: Check the n closest elements as long as there is n elements
+
         for(var j = 0; j < Math.min(numberOfClosestMeasurementsToCheck, d.data.measurements.length); j++){
             closestMeasurement = d.data.measurements[j].data;
             for(var k = 0; k < timestamps.length; k++){
@@ -440,9 +440,7 @@ function HealthGraph(groups, w, className){
     }
 
     function createMeasurementCircles(d3root, circleRadius, className){
-        var circles;
-
-        circles = d3root.selectAll("g.measurement")
+        var circles = d3root.selectAll("g.measurement")
             .append("circle")
             .attr({
                 "stroke": "black",
@@ -571,10 +569,6 @@ function HealthGraph(groups, w, className){
                 var className = d3.select(this.parentNode).attr("class");
                 var searchResult = className.search("measurement");
 
-                var angle =d.startAngle + (d.endAngle - d.startAngle)/2;
-
-
-
                 if(searchResult > -1){
                     // console.log(d.data.label + ": " + angle);
                     coordinates = getLabelCoordinates(d, i, timestamps);
@@ -610,6 +604,11 @@ function HealthGraph(groups, w, className){
             .each(function (d) {
                 d3.select("g.groupLabels").node().appendChild(this);
             });
+
+
+        // now the lines
+        updateLabelLine(d3root, timestamps);
+
     }
 
     // update the label text
@@ -628,30 +627,21 @@ function HealthGraph(groups, w, className){
 
         resizeBox(d3root);
 
-        // move them to the default label radius
-
-        // with all the translate coordinates
-        // fix overlapping issues
-
-
-        // now the lines
-        // updateLabelLine(d3root, timestamp);
-
     }
 
-    function updateLabelLine(d3root, timestamp){
+    function updateLabelLine(d3root, timestamps){
 
         var lineFunction = d3.svg.line()
             .x(function(d) { return d.x; })
             .y(function(d) { return d.y; })
             .interpolate("linear");
 
-        // TODO: subtract the deltas in the label groups with the measurement groups
-
         d3root.selectAll("g.measurement")
             .selectAll("path")
             .transition()
             .attr("d", function(d){
+                var timestamp;
+                var radii = [];
                 var lineData = [];
                 var measurementRadius;
                 var measurementCoordinates;
@@ -660,18 +650,32 @@ function HealthGraph(groups, w, className){
                 labelOffset.x = 0;
                 labelOffset.y = 0;
 
-                measurementRadius = getRadius(d.data, timestamp);
+                for(var i = 0; i < timestamps.length; i ++){
 
-                arc = d3.svg.arc()
-                    .innerRadius(measurementRadius)
-                    .outerRadius(measurementRadius);
+                    timestamp = timestamps[i];
+                    measurementRadius = getRadius(d.data, timestamp);
+                    radii.push(measurementRadius);
 
-                measurementCoordinates = arc.centroid(d);
+                }
 
-                lineData.push({
-                    "x": measurementCoordinates[0],
-                    "y": measurementCoordinates[1]
+                radii.sort(function (a, b) {
+                    return a-b;
                 });
+
+                for(var i = 0; i < radii.length; i ++){
+
+                    arc = d3.svg.arc()
+                        .innerRadius(radii[i])
+                        .outerRadius(radii[i]);
+
+                    measurementCoordinates = arc.centroid(d);
+
+                    lineData.push({
+                        "x": measurementCoordinates[0],
+                        "y": measurementCoordinates[1]
+                    });
+
+                }
 
                 labelOffset.x = d.startAngle < Math.PI ? -1: 1;
                 labelOffset.x *= d.box.width * 0.49;

@@ -214,18 +214,25 @@ function HealthGraph(groups, w, className){
     }
 
     // get the final x and y for the label groups
-    function getLabelCoordinates(d, i, timestamp){
+    function getLabelCoordinates(d, i, timestamps){
+
+        var timestamp;
         var marginLabelMeasurement = 50;
         var arc;
         var measurementRadius;
-        var finalRadius;
+        var finalRadius = 0;
         var coordinates;
         var y;
         var angle = d.startAngle + (d.endAngle - d.startAngle)/2; // preserve the previous angle to complete the circle
 
-        measurementRadius = getRadius(d.data, timestamp);
+        for(var j = 0; j < timestamps.length; j ++){
+            timestamp = timestamps[j];
+            measurementRadius = getRadius(d.data, timestamp);
+            finalRadius = Math.max(measurementRadius + marginLabelMeasurement, defaultLabelRadius, finalRadius);
+        }
 
-        finalRadius = Math.max(measurementRadius + marginLabelMeasurement, defaultLabelRadius);
+
+
 
         arc = d3.svg.arc()
             .innerRadius(finalRadius)
@@ -272,12 +279,14 @@ function HealthGraph(groups, w, className){
         return coordinates;
     }
 
-    function getGroupLabelCoordinates(d, i, timestamp){
+    function getGroupLabelCoordinates(d, i, timestamps){
+
+        var timestamp;
         var marginLabelMeasurement = 50;
         var numberOfClosestMeasurementsToCheck = 3;
         var arc;
         var measurementRadius;
-        var finalRadius;
+        var finalRadius = 0;
         var coordinates;
         var y;
         var closestMeasurement;
@@ -298,9 +307,11 @@ function HealthGraph(groups, w, className){
         // TODO: Check the n closest elements as long as there is n elements
         for(var j = 0; j < Math.min(numberOfClosestMeasurementsToCheck, d.data.measurements.length); j++){
             closestMeasurement = d.data.measurements[j].data;
-            measurementRadius = getRadius(closestMeasurement, timestamp);
-
-            finalRadius = Math.max(measurementRadius + marginLabelMeasurement, defaultLabelRadius);
+            for(var k = 0; k < timestamps.length; k++){
+                timestamp = timestamps[k];
+                measurementRadius = getRadius(closestMeasurement, timestamp);
+                finalRadius = Math.max(measurementRadius + marginLabelMeasurement, defaultLabelRadius, finalRadius);
+            }
 
         }
 
@@ -532,7 +543,7 @@ function HealthGraph(groups, w, className){
         return angle < 3/2*Math.PI && angle >= Math.PI;
     }
 
-    function moveLabels(d3root, anglePosition, sortFunction, timestamp){
+    function moveLabels(d3root, anglePosition, sortFunction, timestamps){
 
         var i = 0; // variable i from d3 does not work for this case
 
@@ -566,10 +577,10 @@ function HealthGraph(groups, w, className){
 
                 if(searchResult > -1){
                     // console.log(d.data.label + ": " + angle);
-                    coordinates = getLabelCoordinates(d, i, timestamp);
+                    coordinates = getLabelCoordinates(d, i, timestamps);
                 } else{
                     // console.log("* " + d.data.label + ": " + angle);
-                    coordinates = getGroupLabelCoordinates(d, i, timestamp);
+                    coordinates = getGroupLabelCoordinates(d, i, timestamps);
                 }
 
                 i++;
@@ -577,19 +588,19 @@ function HealthGraph(groups, w, className){
             });
     }
 
-    function moveLabelsWrapper(d3root, timestamp){
+    function moveLabelsWrapper(d3root, timestamps){
 
         // upper right corner
-        moveLabels(d3root, angleUpperRight, descending, timestamp);
+        moveLabels(d3root, angleUpperRight, descending, timestamps);
 
         // upper left corner
-        moveLabels(d3root, angleUpperLeft, ascending, timestamp);
+        moveLabels(d3root, angleUpperLeft, ascending, timestamps);
 
         // lower right corner
-        moveLabels(d3root, angleLowerRight, ascending, timestamp);
+        moveLabels(d3root, angleLowerRight, ascending, timestamps);
 
         // lower left corner
-        moveLabels(d3root, angleLowerLeft, descending, timestamp);
+        moveLabels(d3root, angleLowerLeft, descending, timestamps);
 
         d3root.selectAll("g.measurement")
             .sort(ascending);
@@ -621,10 +632,10 @@ function HealthGraph(groups, w, className){
 
         // with all the translate coordinates
         // fix overlapping issues
-        moveLabelsWrapper(d3root, timestamp);
+
 
         // now the lines
-        updateLabelLine(d3root, timestamp);
+        // updateLabelLine(d3root, timestamp);
 
     }
 
@@ -844,7 +855,9 @@ function HealthGraph(groups, w, className){
         // at the end of the day I only want to move the labels to the largest possible radii
         // can we accomplish this only with the timestamp?
 
-        moveLabelsWrapper(d3root, timestamp);
+        plottedTimestamps.push(timestamp);
+
+        moveLabelsWrapper(d3root, plottedTimestamps);
     }
 
     /**
@@ -961,9 +974,19 @@ function HealthGraph(groups, w, className){
     activeCircles = createMeasurementCircles(hGraph, circleRadius, "active");
 
     // here we can call the update functions
-    updatePolygon(hGraph, 1, activePolygon); // testing the methods
-    updateMeasurements(activeCircles, 1); // testing the methods
-    updateLabels(hGraph, 1);
+
+    var plottedTimestamp = 1;
+
+    updatePolygon(hGraph, plottedTimestamp, activePolygon); // testing the methods
+    updateMeasurements(activeCircles, plottedTimestamp); // testing the methods
+
+    var plottedTimestamps = [];
+
+    plottedTimestamps.push(plottedTimestamp);
+
+    updateLabels(hGraph, plottedTimestamp);
+
+    moveLabelsWrapper(hGraph, plottedTimestamps);
 
     // test the update action
     /*
@@ -992,10 +1015,17 @@ function HealthGraph(groups, w, className){
     return {
 
         "update": function (timestamp) {
+
+            var i = plottedTimestamps.indexOf(plottedTimestamp);
+            plottedTimestamps[i] = timestamp;
+
             updatePolygon(hGraph, timestamp, activePolygon);
             updateMeasurements(activeCircles, timestamp);
             updateLabels(hGraph, timestamp);
 
+            moveLabelsWrapper(hGraph, plottedTimestamps);
+
+            plottedTimestamp = timestamp;
         },
 
         "hGraph": hGraph,

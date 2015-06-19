@@ -862,6 +862,15 @@ function HealthGraph(groups, w, className){
         plottedTimestamps.push(timestamp);
 
         moveLabelsWrapper(d3root, plottedTimestamps);
+
+        return {
+            "update": function(){
+                // TODO: return a function that allows the graph to move
+            },
+            "remove": function(){
+                // TODO: return a function to remove the graph
+            }
+        };
     }
 
     /**
@@ -1035,7 +1044,7 @@ function HealthGraph(groups, w, className){
         "hGraph": hGraph,
 
         "plotAt": function (timestamp) {
-            plotAt(hGraph, timestamp);
+            return plotAt(hGraph, timestamp);
         }
     }
 

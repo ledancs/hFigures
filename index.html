@@ -3,8 +3,6 @@
 <head lang="en">
     <meta charset="utf-8">
     <title></title>
-    <script charset="utf-8" src="d3.min.js"></script>
-    <script charset="utf-8" src="dataPatientDiabetes.js"></script>
     <style type="text/css">
         body {
             font-family: sans-serif;
@@ -29,8 +27,8 @@
         div.hGraph-container {
             margin: 0;
             padding: 0;
-            height: 97%;
-            width: 97%;
+            height: 98.45%;
+            width: 99.45%;
             display: inline-block;
             position: absolute;
             vertical-align: middle;
@@ -40,38 +38,42 @@
 </head>
 <body>
 
+<script charset="utf-8" src="d3.js"></script>
+<script charset="utf-8" src="dataPatientDiabetes.js"></script>
 <script src="hGraph.js" type="application/javascript"></script>
 <script src="apps/d3zoom/zoom.js" type="application/javascript"></script>
 <script type="text/javascript">
-    var w = 800;
-    var h = 800;
+    var w = 1000;
     var className = "hGraph-container";
 
-    var hGraphInstance = new HealthGraph(groups, w, h, className); // from data.js
+    var hGraphInstance = HealthGraph(groups, w, className); // from data.js
 
-    // render again with the new values
 
-    // var oldGraph = hGraphInstance.interpolateSamplesAt(0);
-    // oldGraph.attr("opacity", 0.55);
-
-    
-    document.addEventListener("keydown", keyDownTextField, false);
     function keyDownTextField(e) {
+
         var keyCode = e.keyCode;
+
         switch (keyCode){
+
             case 37:
                 // left arrow
-                hGraphInstance.plotSamplesAt(0);
+                hGraphInstance.update(0);
                 break;
+
             case 39:
-                hGraphInstance.plotSamplesAt(1);
                 // right arrow
+                hGraphInstance.update(1);
                 break;
         }
     }
-    
 
-    // hGraphInstance.plotSamplesAt(0);
+
+    document.addEventListener("keydown", keyDownTextField, false);
+
+
+    setTimeout(function(){
+        hGraphInstance.plotAt(0);
+    }, 3000);
 
     // the className is needed to set the viewBox in the svg element inside the div container.
     d3zoom(className);

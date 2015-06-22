@@ -646,6 +646,7 @@ function HealthGraph(groups, w, className){
                 var measurementRadius;
                 var measurementCoordinates;
                 var arc;
+                var angle;
                 var labelOffset = {};
                 labelOffset.x = 0;
                 labelOffset.y = 0;
@@ -677,7 +678,9 @@ function HealthGraph(groups, w, className){
 
                 }
 
-                labelOffset.x = d.startAngle < Math.PI ? -1: 1;
+                angle = getAngle(d);
+
+                labelOffset.x = angle <= Math.PI ? -1: 1;
                 labelOffset.x *= d.box.width * 0.49;
 
 

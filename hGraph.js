@@ -308,7 +308,8 @@ function HealthGraph(groups, w, className){
             for(var k = 0; k < timestamps.length; k++){
                 timestamp = timestamps[k];
                 measurementRadius = getRadius(closestMeasurement, timestamp);
-                finalRadius = Math.max(measurementRadius + marginLabelMeasurement, finalRadius);
+                measurementRadius += marginLabelMeasurement;
+                finalRadius = Math.max(measurementRadius, finalRadius);
             }
 
         }

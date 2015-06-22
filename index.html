@@ -41,7 +41,7 @@
 <script charset="utf-8" src="d3.js"></script>
 <script charset="utf-8" src="dataPatientDiabetes.js"></script>
 <script src="hGraph.js" type="application/javascript"></script>
-<script src="apps/d3zoom/zoom.js" type="application/javascript"></script>
+
 <script type="text/javascript">
     var w = 1000;
     var className = "hGraph-container";
@@ -75,8 +75,6 @@
         hGraphInstance.plotAt(0);
     }, 3000);
 
-    // the className is needed to set the viewBox in the svg element inside the div container.
-    d3zoom(className);
 
 </script>
 

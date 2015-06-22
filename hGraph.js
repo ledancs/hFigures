@@ -877,6 +877,37 @@ function HealthGraph(groups, w, className){
     }
 
     /**
+     * Zoom
+     */
+
+    function zoomIn(scale1, scale2){
+        return scale1 > threshold && scale1 > scale2 && !zoomedIn;
+    }
+
+    function zoomOut(scale1, scale2){
+        return scale1 <= threshold && scale1 < scale2 && zoomedIn;
+    }
+
+    function toggle(){
+        zoomedIn = !zoomedIn;
+
+        hGraph.selectAll("g.measurement").selectAll("g.label").attr("opacity", zoomedIn ? 1: 0);
+        hGraph.selectAll("g.measurement").selectAll("path").attr("opacity", zoomedIn ? 1: 0);
+
+        hGraph.selectAll("g.groupLabel").selectAll("g.label").attr("opacity", zoomedIn ? 0.5: 1);
+    }
+
+    function zoomed() {
+        if(zoomIn(d3.event.scale, prevScale) || zoomOut(d3.event.scale, prevScale))
+            toggle();
+
+        svg.select("g.hGraph-wrapper")
+            .attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+
+        prevScale = d3.event.scale;
+    }
+
+    /**
      * begin the main code
      */
 
@@ -911,6 +942,17 @@ function HealthGraph(groups, w, className){
     var activeCircles;
 
     var timestamp = 0;
+
+    var prevScale = 1;
+    var threshold = 1;
+    var zoomedIn = false;
+
+    var minScale = 0.5;
+    var maxScale = 2.0;
+
+    var zoom = d3.behavior.zoom()
+        .scaleExtent([minScale, maxScale])
+        .on("zoom", zoomed);
 
     svg = createSVG(className, w);
     hGraph = createHGraph(svg);
@@ -1027,6 +1069,16 @@ function HealthGraph(groups, w, className){
 
     var translate = "translate(" + (w * 1) + ", " + (w * 0.55) + ")";
     hGraph.attr("transform", translate);
+
+    // activate the zoom
+
+    svg.call(zoom);
+
+    // show and hide
+    hGraph.selectAll("g.measurement").selectAll("g.label").attr("opacity", 0);
+    hGraph.selectAll("g.measurement").selectAll("path").attr("opacity", 0);
+
+    hGraph.selectAll("g.groupLabel").selectAll("g.label").attr("opacity", 1);
 
     return {
 

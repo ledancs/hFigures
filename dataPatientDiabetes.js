@@ -175,10 +175,10 @@ var groups = [
         label: "Nutrition",
         measurements:[
             {
-                min: 4,
-                max: 5,
-                yellow_min: 3,
-                red_min: 2,
+                min: 3,
+                max: 6,
+                yellow_min: 2,
+                red_min: 1,
                 units: "",
                 label: "Regularity",
                 samples: [
@@ -193,10 +193,10 @@ var groups = [
                 ]
             },
             {
-                min: 3,
-                max: 3,
-                yellow_min: 2,
-                red_min: 1,
+                min: 2,
+                max: 5,
+                yellow_min: 1,
+                red_min: 0,
                 units: "",
                 label: "Vegetables, berries & fruit",
                 samples: [

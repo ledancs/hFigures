@@ -284,7 +284,7 @@ function HealthGraph(groups, w, className){
         var numberOfClosestMeasurementsToCheck = 3;
         var arc;
         var measurementRadius;
-        var finalRadius = 0;
+        var finalRadius = defaultLabelRadius;
         var coordinates;
         var y;
         var closestMeasurement;
@@ -308,7 +308,7 @@ function HealthGraph(groups, w, className){
             for(var k = 0; k < timestamps.length; k++){
                 timestamp = timestamps[k];
                 measurementRadius = getRadius(closestMeasurement, timestamp);
-                finalRadius = Math.max(measurementRadius + marginLabelMeasurement, defaultLabelRadius, finalRadius);
+                finalRadius = Math.max(measurementRadius + marginLabelMeasurement, finalRadius);
             }
 
         }

@@ -220,7 +220,7 @@ function HealthGraph(groups, w, className){
         var marginLabelMeasurement = 50;
         var arc;
         var measurementRadius;
-        var finalRadius = 0;
+        var finalRadius = defaultLabelRadius;
         var coordinates;
         var y;
         var angle = d.startAngle + (d.endAngle - d.startAngle)/2; // preserve the previous angle to complete the circle
@@ -228,11 +228,9 @@ function HealthGraph(groups, w, className){
         for(var j = 0; j < timestamps.length; j ++){
             timestamp = timestamps[j];
             measurementRadius = getRadius(d.data, timestamp);
-            finalRadius = Math.max(measurementRadius + marginLabelMeasurement, defaultLabelRadius, finalRadius);
+            measurementRadius += marginLabelMeasurement;
+            finalRadius = Math.max(measurementRadius, finalRadius);
         }
-
-
-
 
         arc = d3.svg.arc()
             .innerRadius(finalRadius)
@@ -569,13 +567,9 @@ function HealthGraph(groups, w, className){
                 var className = d3.select(this.parentNode).attr("class");
                 var searchResult = className.search("measurement");
 
-                if(searchResult > -1){
-                    // console.log(d.data.label + ": " + angle);
-                    coordinates = getLabelCoordinates(d, i, timestamps);
-                } else{
-                    // console.log("* " + d.data.label + ": " + angle);
-                    coordinates = getGroupLabelCoordinates(d, i, timestamps);
-                }
+                coordinates = searchResult > -1 ?
+                    getLabelCoordinates(d, i, timestamps):
+                    getGroupLabelCoordinates(d, i, timestamps);
 
                 i++;
                 return "translate (" + coordinates.join(",") + ")";
@@ -651,6 +645,7 @@ function HealthGraph(groups, w, className){
                 labelOffset.x = 0;
                 labelOffset.y = 0;
 
+                // get the radius for each timestamp of the measurement
                 for(var i = 0; i < timestamps.length; i ++){
 
                     timestamp = timestamps[i];
@@ -659,10 +654,13 @@ function HealthGraph(groups, w, className){
 
                 }
 
+                // sort them in ascending order
                 radii.sort(function (a, b) {
                     return a-b;
                 });
 
+                // for each radius (timestamp plotted)
+                // get the centroid and add it to the path coordinates
                 for(var i = 0; i < radii.length; i ++){
 
                     arc = d3.svg.arc()
@@ -677,20 +675,21 @@ function HealthGraph(groups, w, className){
                     });
 
                 }
-
+                // get the angle of this measurement sector
                 angle = getAngle(d);
-
+                // determine the offset of the line
                 labelOffset.x = angle <= Math.PI ? -1: 1;
                 labelOffset.x *= d.box.width * 0.49;
 
-
+                // place the line in the middle of the label
                 labelOffset.y -= d.box.height * 0.35;
-
+                // add to the path the label coordinates
+                // this is the last point in the path
                 lineData.push({
                     "x": d.offset.x + labelOffset.x,
                     "y": d.offset.y + labelOffset.y
                 });
-
+                // return the path string
                 return lineFunction(lineData);
 
             });

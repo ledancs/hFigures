@@ -47,7 +47,7 @@
     var className = "hGraph-container";
 
     var hGraphInstance = HealthGraph(groups, w, className); // from data.js
-
+    var additionalGraph = hGraphInstance.plotAt(0);
 
     function keyDownTextField(e) {
 
@@ -64,16 +64,21 @@
                 // right arrow
                 hGraphInstance.update(1);
                 break;
+
+            case 65:
+                // 'a' letter
+                additionalGraph.update(0);
+                break;
+            case 68:
+                // 'd' letter
+                additionalGraph.update(1);
+                break;
         }
     }
 
 
     document.addEventListener("keydown", keyDownTextField, false);
 
-
-    setTimeout(function(){
-        hGraphInstance.plotAt(0);
-    }, 3000);
 
 
 </script>

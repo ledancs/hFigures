@@ -866,14 +866,13 @@ function HealthGraph(groups, w, className){
 
         moveLabelsWrapper(d3root, plottedTimestamps);
 
-        return {
-            "update": function(){
-                // TODO: return a function that allows the graph to move
-            },
-            "remove": function(){
-                // TODO: return a function to remove the graph
-            }
+        var plottedGraph = new Graph(circles, timestamp, polygon);
+
+        plottedGraph.update = function(newTimestamp){
+            updateFromInstance.apply(plottedGraph, [newTimestamp]);
         };
+
+        return plottedGraph;
     }
 
     /**
@@ -897,14 +896,56 @@ function HealthGraph(groups, w, className){
         hGraph.selectAll("g.groupLabel").selectAll("g.label").attr("opacity", zoomedIn ? 0.5: 1);
     }
 
+
     function zoomed() {
+        // uncomment to enable zoom in and out callbacks
+        /*
         if(zoomIn(d3.event.scale, prevScale) || zoomOut(d3.event.scale, prevScale))
             toggle();
-
+        */
         svg.select("g.hGraph-wrapper")
             .attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
 
         prevScale = d3.event.scale;
+
+    }
+
+    // we need to know the polygon
+    // the circles
+    // the existing plotted timestamp
+    // the new timestamp to plot
+
+    function updateFromInstance (newTimestamp) {
+
+        var oldTimestamp = this.timestamp;
+        var polygon = this.polygon;
+        var i = plottedTimestamps.indexOf(oldTimestamp);
+        var circles = this.circles;
+
+        plottedTimestamps[i] = newTimestamp;
+
+        updatePolygon(hGraph, newTimestamp, polygon);
+        updateMeasurements(circles, newTimestamp);
+
+        if(circles.attr("class") === "active")
+            updateLabels(hGraph, newTimestamp);
+
+        moveLabelsWrapper(hGraph, plottedTimestamps);
+
+        this.timestamp = newTimestamp;
+    }
+
+    /**
+     *
+     * @param circles
+     * @param timestamp
+     * @param polygon
+     * @constructor
+     */
+    function Graph (circles, timestamp, polygon){
+        this.circles = circles;
+        this.timestamp = timestamp;
+        this.polygon = polygon;
     }
 
     /**
@@ -1033,17 +1074,13 @@ function HealthGraph(groups, w, className){
 
     // here we can call the update functions
 
-    var plottedTimestamp = 1;
-
-    updatePolygon(hGraph, plottedTimestamp, activePolygon); // testing the methods
-    updateMeasurements(activeCircles, plottedTimestamp); // testing the methods
-
+    var timestampToPlot = 1;
     var plottedTimestamps = [];
 
-    plottedTimestamps.push(plottedTimestamp);
-
-    updateLabels(hGraph, plottedTimestamp);
-
+    updatePolygon(hGraph, timestampToPlot, activePolygon); // testing the methods
+    updateMeasurements(activeCircles, timestampToPlot); // testing the methods
+    plottedTimestamps.push(timestampToPlot);
+    updateLabels(hGraph, timestampToPlot);
     moveLabelsWrapper(hGraph, plottedTimestamps);
 
     // test the update action
@@ -1075,33 +1112,22 @@ function HealthGraph(groups, w, className){
     svg.call(zoom);
 
     // show and hide
-    hGraph.selectAll("g.measurement").selectAll("g.label").attr("opacity", 0);
-    hGraph.selectAll("g.measurement").selectAll("path").attr("opacity", 0);
+    hGraph.selectAll("g.measurement").selectAll("g.label").attr("opacity", 1);
+    hGraph.selectAll("g.measurement").selectAll("path").attr("opacity", 1);
 
     hGraph.selectAll("g.groupLabel").selectAll("g.label").attr("opacity", 1);
 
-    return {
+    var initialGraph = new Graph(activeCircles, timestampToPlot, activePolygon);
 
-        "update": function (timestamp) {
+    initialGraph.update = function(newTimestamp){
+        updateFromInstance.apply(initialGraph, [newTimestamp]);
+    };
 
-            var i = plottedTimestamps.indexOf(plottedTimestamp);
-            plottedTimestamps[i] = timestamp;
+    initialGraph.plotAt = function (timestamp) {
+        return plotAt(hGraph, timestamp);
+    };
 
-            updatePolygon(hGraph, timestamp, activePolygon);
-            updateMeasurements(activeCircles, timestamp);
-            updateLabels(hGraph, timestamp);
-
-            moveLabelsWrapper(hGraph, plottedTimestamps);
-
-            plottedTimestamp = timestamp;
-        },
-
-        "hGraph": hGraph,
-
-        "plotAt": function (timestamp) {
-            return plotAt(hGraph, timestamp);
-        }
-    }
+    return initialGraph;
 
 }
 

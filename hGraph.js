@@ -122,6 +122,17 @@ function HealthGraph(groups, w, className){
 
     // how to update the circles
     function updateMeasurements(circles, timestamp){
+
+        circles.on('mouseover', function(d){
+
+            var selectedSample = getSelectedSample(d.data, timestamp);
+            console.log(d.data.label + " : " + selectedSample.value);
+
+        });
+        circles.on('mouseout', function(d){
+
+        });
+
         circles.transition()
             .attr("cx", function (d) {
                 return getArc(d.data, timestamp).centroid(d)[0];
@@ -916,11 +927,11 @@ function HealthGraph(groups, w, className){
         return scale1 <= threshold && scale1 < scale2 && zoomedIn;
     }
 
-    function toggle(){
+    function toggleZoom(){
         zoomedIn = !zoomedIn;
 
-        hGraph.selectAll("g.measurement").selectAll("g.label").attr("opacity", zoomedIn ? 1: 0);
-        hGraph.selectAll("g.measurement").selectAll("path").attr("opacity", zoomedIn ? 1: 0);
+        hGraph.selectAll("g.measurement").selectAll("g.label").attr("opacity", zoomedIn ? 1: 0.3);
+        hGraph.selectAll("g.measurement").selectAll("path").attr("opacity", zoomedIn ? 1: 0.3);
 
         hGraph.selectAll("g.groupLabel").selectAll("g.label").attr("opacity", zoomedIn ? 0.5: 1);
     }
@@ -929,7 +940,7 @@ function HealthGraph(groups, w, className){
     function zoomed() {
         // uncomment to enable zoom in and out callbacks
 
-        if(zoomIn(d3.event.scale, prevScale) || zoomOut(d3.event.scale, prevScale)) toggle();
+        if(zoomIn(d3.event.scale, prevScale) || zoomOut(d3.event.scale, prevScale)) toggleZoom();
 
         svg.select("g.hGraph-wrapper")
             .attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
@@ -939,8 +950,8 @@ function HealthGraph(groups, w, className){
     }
 
     function prepareZooming(){
-        svg.selectAll("g.measurement").selectAll("g.label").attr("opacity", 0);
-        svg.selectAll("g.measurement").selectAll("path").attr("opacity", 0);
+        svg.selectAll("g.measurement").selectAll("g.label").attr("opacity", 0.3);
+        svg.selectAll("g.measurement").selectAll("path").attr("opacity", 0.3);
 
         svg.selectAll("g.groupLabel").selectAll("g.label").attr("opacity", 1);
     }
@@ -997,7 +1008,7 @@ function HealthGraph(groups, w, className){
 
         group.selectAll("circle")
             .transition()
-            .attr("r", mouseOver ? 10: circleRadius);
+            .attr("r", mouseOver ? circleRadius * 1.85: circleRadius);
 
         group.select("path")
             .transition()

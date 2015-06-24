@@ -45,42 +45,36 @@
 <script type="text/javascript">
     var w = 1000;
     var className = "hGraph-container";
+    var hGraphInstance = HealthGraph(groups, w, className); // from data.js
+    var additionalGraph = hGraphInstance.plotAt(0);
 
+    function keyDownTextField(e) {
 
+        var keyCode = e.keyCode;
 
-    setTimeout(function(){
-        var hGraphInstance = HealthGraph(groups, w, className); // from data.js
-        var additionalGraph = hGraphInstance.plotAt(0);
+        switch (keyCode){
 
-        function keyDownTextField(e) {
+            case 37:
+                // left arrow
+                hGraphInstance.update(0);
+                break;
 
-            var keyCode = e.keyCode;
+            case 39:
+                // right arrow
+                hGraphInstance.update(1);
+                break;
 
-            switch (keyCode){
-
-                case 37:
-                    // left arrow
-                    hGraphInstance.update(0);
-                    break;
-
-                case 39:
-                    // right arrow
-                    hGraphInstance.update(1);
-                    break;
-
-                case 65:
-                    // 'a' letter
-                    additionalGraph.update(0);
-                    break;
-                case 68:
-                    // 'd' letter
-                    additionalGraph.update(1);
-                    break;
-            }
+            case 65:
+                // 'a' letter
+                additionalGraph.update(0);
+                break;
+            case 68:
+                // 'd' letter
+                additionalGraph.update(1);
+                break;
         }
-        document.addEventListener("keydown", keyDownTextField, false);
-
-    }, 0);
+    }
+    document.addEventListener("keydown", keyDownTextField, false);
 
 
 </script>

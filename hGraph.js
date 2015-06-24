@@ -629,6 +629,14 @@ function HealthGraph(groups, w, className){
 
     }
 
+    function endAll(transition, callback) {
+        var n = 0;
+        transition.each(function() { ++n; })
+            .each('end', function() {
+                if (!--n) callback.apply(this, arguments);
+            });
+    }
+
     function updateLabelLine(d3root, timestamps){
 
         var lineFunction = d3.svg.line()
@@ -640,60 +648,73 @@ function HealthGraph(groups, w, className){
             .selectAll("path")
             .transition()
             .attr("d", function(d){
-                var timestamp;
-                var radii = [];
-                var lineData = [];
-                var measurementRadius;
-                var measurementCoordinates;
-                var arc;
-                var angle;
-                var labelOffset = {};
-                labelOffset.x = 0;
-                labelOffset.y = 0;
+                return getLabelLinePath(lineFunction, timestamps, d);
+            }).call(endAll, function(){
 
-                for(var i = 0; i < timestamps.length; i ++){
+                animationsComplete = true;
 
-                    timestamp = timestamps[i];
-                    measurementRadius = getRadius(d.data, timestamp);
-                    radii.push(measurementRadius);
-
+                var callback;
+                while(callbacks.length > 0){
+                    callback = callbacks.pop();
+                    callback();
                 }
-
-                radii.sort(function (a, b) {
-                    return a-b;
-                });
-
-                for(var i = 0; i < radii.length; i ++){
-
-                    arc = d3.svg.arc()
-                        .innerRadius(radii[i])
-                        .outerRadius(radii[i]);
-
-                    measurementCoordinates = arc.centroid(d);
-
-                    lineData.push({
-                        "x": measurementCoordinates[0],
-                        "y": measurementCoordinates[1]
-                    });
-
-                }
-
-                angle = getAngle(d);
-
-                labelOffset.x = angle <= Math.PI ? -1: 1;
-                labelOffset.x *= d.box.width * 0.49;
-
-
-                labelOffset.y -= d.box.height * 0.35;
-
-                lineData.push({
-                    "x": d.offset.x + labelOffset.x,
-                    "y": d.offset.y + labelOffset.y
-                });
-
-                return lineFunction(lineData);
-
             });
+    }
+
+    function getLabelLinePath(lineFunction, timestamps, d){
+
+        var timestamp;
+        var radii = [];
+        var lineData = [];
+        var measurementRadius;
+        var measurementCoordinates;
+        var arc;
+        var angle;
+        var labelOffset = {};
+        labelOffset.x = 0;
+        labelOffset.y = 0;
+
+        for(var i = 0; i < timestamps.length; i ++){
+
+            timestamp = timestamps[i];
+            measurementRadius = getRadius(d.data, timestamp);
+            radii.push(measurementRadius);
+
+        }
+
+        radii.sort(function (a, b) {
+            return a-b;
+        });
+
+        for(var i = 0; i < radii.length; i ++){
+
+            arc = d3.svg.arc()
+                .innerRadius(radii[i])
+                .outerRadius(radii[i]);
+
+            measurementCoordinates = arc.centroid(d);
+
+            lineData.push({
+                "x": measurementCoordinates[0],
+                "y": measurementCoordinates[1]
+            });
+
+        }
+
+        angle = getAngle(d);
+
+        labelOffset.x = angle <= Math.PI ? -1: 1;
+        labelOffset.x *= d.box.width * 0.49;
+
+
+        labelOffset.y -= d.box.height * 0.35;
+
+        lineData.push({
+            "x": d.offset.x + labelOffset.x,
+            "y": d.offset.y + labelOffset.y
+        });
+
+        return lineFunction(lineData);
     }
 
     function updateLabelText(d3root, timestamp){
@@ -855,16 +876,12 @@ function HealthGraph(groups, w, className){
                 this.parentNode.appendChild(this);
             });
 
-        updatePolygon(d3root, timestamp, polygon);
-
-        updateMeasurements(circles, timestamp);
-
-        // at the end of the day I only want to move the labels to the largest possible radii
-        // can we accomplish this only with the timestamp?
-
-        plottedTimestamps.push(timestamp);
-
-        moveLabelsWrapper(d3root, plottedTimestamps);
+        // if the initial graph has completed the last animation
+        if(animationsComplete) updatePlottedGraph(d3root, timestamp, polygon, circles);
+        // otherwise add it to the general callback array for later execution
+        else callbacks.push(function () {
+            updatePlottedGraph(d3root, timestamp, polygon, circles);
+        });
 
         var plottedGraph = new Graph(circles, timestamp, polygon);
 
@@ -873,6 +890,18 @@ function HealthGraph(groups, w, className){
         };
 
         return plottedGraph;
+    }
+
+    function updatePlottedGraph(d3root, timestamp, polygon, circles){
+
+        plottedTimestamps.push(timestamp); // add the timestamp to the array of plotted timestamps for detecting label collision
+
+        updatePolygon(d3root, timestamp, polygon); // polygon
+
+        updateMeasurements(circles, timestamp); // circles
+
+        moveLabelsWrapper(d3root, plottedTimestamps); // adjust overlapping labels
+
     }
 
     /**
@@ -899,15 +928,21 @@ function HealthGraph(groups, w, className){
 
     function zoomed() {
         // uncomment to enable zoom in and out callbacks
-        /*
-        if(zoomIn(d3.event.scale, prevScale) || zoomOut(d3.event.scale, prevScale))
-            toggle();
-        */
+
+        if(zoomIn(d3.event.scale, prevScale) || zoomOut(d3.event.scale, prevScale)) toggle();
+
         svg.select("g.hGraph-wrapper")
             .attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
 
         prevScale = d3.event.scale;
 
+    }
+
+    function prepareZooming(){
+        svg.selectAll("g.measurement").selectAll("g.label").attr("opacity", 0);
+        svg.selectAll("g.measurement").selectAll("path").attr("opacity", 0);
+
+        svg.selectAll("g.groupLabel").selectAll("g.label").attr("opacity", 1);
     }
 
     // we need to know the polygon
@@ -948,6 +983,28 @@ function HealthGraph(groups, w, className){
         this.polygon = polygon;
     }
 
+
+    function toggleMeasurementGroups(group, mouseOver){
+
+        group.select("rect")
+            .transition()
+            .attr("fill", mouseOver ? "#FFFF66": "white")
+            .attr("stroke", mouseOver ? "black": "grey");
+
+        group.select("text")
+            .transition()
+            .attr("fill", mouseOver ? "black": "grey");
+
+        group.selectAll("circle")
+            .transition()
+            .attr("r", mouseOver ? 10: circleRadius);
+
+        group.select("path")
+            .transition()
+            .attr("stroke-width", mouseOver ? 2.75: 1);
+
+    }
+
     /**
      * begin the main code
      */
@@ -970,6 +1027,9 @@ function HealthGraph(groups, w, className){
     var svg;
     var hGraph; // and SVG group
 
+    var timestampToPlot = 1;
+    var plottedTimestamps = [];
+
     var arc;
     var pie;
 
@@ -982,7 +1042,9 @@ function HealthGraph(groups, w, className){
     var activePolygon;
     var activeCircles;
 
-    var timestamp = 0;
+    var animationsComplete = false;
+    var callbacks = [];
+
 
     var prevScale = 1;
     var threshold = 1;
@@ -1063,7 +1125,7 @@ function HealthGraph(groups, w, className){
         .append("g")
         .attr("class", "measurements"); // wrapper for all measurements
 
-    createSvgMeasurementGroups(hGraph, measurementsObjects); // create a svg group for each measurement
+    var svgMeasurementGroups = createSvgMeasurementGroups(hGraph, measurementsObjects); // create a svg group for each measurement
 
     //measurementsDataObjects.concat(zonesDataObjects)
 
@@ -1072,16 +1134,17 @@ function HealthGraph(groups, w, className){
     // create the circles in each of the SVG group with the class "measurement"
     activeCircles = createMeasurementCircles(hGraph, circleRadius, "active");
 
+    svgMeasurementGroups.on("mouseover", function(d){
+        toggleMeasurementGroups(d3.select(this), true);
+    }).on("mouseout", function(d){
+        toggleMeasurementGroups(d3.select(this), false);
+    });
+
     // here we can call the update functions
 
-    var timestampToPlot = 1;
-    var plottedTimestamps = [];
-
-    updatePolygon(hGraph, timestampToPlot, activePolygon); // testing the methods
-    updateMeasurements(activeCircles, timestampToPlot); // testing the methods
-    plottedTimestamps.push(timestampToPlot);
     updateLabels(hGraph, timestampToPlot);
-    moveLabelsWrapper(hGraph, plottedTimestamps);
+    updatePlottedGraph(hGraph, timestampToPlot, activePolygon, activeCircles);
+
 
     // test the update action
     /*
@@ -1111,11 +1174,8 @@ function HealthGraph(groups, w, className){
 
     svg.call(zoom);
 
-    // show and hide
-    hGraph.selectAll("g.measurement").selectAll("g.label").attr("opacity", 1);
-    hGraph.selectAll("g.measurement").selectAll("path").attr("opacity", 1);
-
-    hGraph.selectAll("g.groupLabel").selectAll("g.label").attr("opacity", 1);
+    // show and hide for zooming effects
+    prepareZooming();
 
     var initialGraph = new Graph(activeCircles, timestampToPlot, activePolygon);
 
@@ -1125,6 +1185,7 @@ function HealthGraph(groups, w, className){
 
     initialGraph.plotAt = function (timestamp) {
         return plotAt(hGraph, timestamp);
+
     };
 
     return initialGraph;

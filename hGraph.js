@@ -356,10 +356,19 @@ function HealthGraph(groups, w, className){
 
     // selects the sample closest to the timestamp provided but before that not after
     function getSampleIndex(timestamp, samples){
+        var i;
 
-        // TODO: get the actual index of the sample closest to the given timestamp
+        samples.sort(function (a, b) {
+            return a.timestamp - b.timestamp;
+        });
 
-        return timestamp;
+        for(i = 0; i < samples.length; i++){
+            if(samples[i].timestamp >= timestamp){
+                return i;
+            }
+        }
+
+        return --i;
     }
 
     function getColor(measurement, timestamp, className){
@@ -950,8 +959,8 @@ function HealthGraph(groups, w, className){
     }
 
     function prepareZooming(){
-        svg.selectAll("g.measurement").selectAll("g.label").attr("opacity", 0.3);
-        svg.selectAll("g.measurement").selectAll("path").attr("opacity", 0.3);
+        svg.selectAll("g.measurement").selectAll("g.label").attr("opacity", 0);
+        svg.selectAll("g.measurement").selectAll("path").attr("opacity", 0);
 
         svg.selectAll("g.groupLabel").selectAll("g.label").attr("opacity", 1);
     }
@@ -1030,10 +1039,10 @@ function HealthGraph(groups, w, className){
     var innerRadius = w * 0.3;
     var defaultLabelRadius = w * 0.45;
 
-    var groupLabelFontSize = 36;
-    var measurementLabelFontSize = 16;
+    var groupLabelFontSize = 24;
+    var measurementLabelFontSize = 12;
 
-    var circleRadius = 5;
+    var circleRadius = 8;
 
     var svg;
     var hGraph; // and SVG group

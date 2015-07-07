@@ -1072,7 +1072,7 @@ function HealthGraph(groups, w, className){
     var svg;
     var hGraph; // and SVG group
 
-    var timestampToPlot = 1;
+    var timestampToPlot = new Date().getTime();
     var plottedTimestamps = [];
 
     var arc;

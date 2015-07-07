@@ -38,12 +38,14 @@
 </head>
 <body>
 
+<div class="hGraph-container"></div>
+
 <script charset="utf-8" src="d3.js"></script>
 <script charset="utf-8" src="dataPatientDiabetes.js"></script>
 <script src="hGraph.js" type="application/javascript"></script>
 
 <script type="text/javascript">
-    var w = 1000;
+    var w = 850;
     var className = "hGraph-container";
     var hGraphInstance = HealthGraph(groups, w, className); // from data.js
     var additionalGraph = hGraphInstance.plotAt(0);
@@ -61,6 +63,7 @@
 
             case 39:
                 // right arrow
+                console.log("next ts : " + hGraphInstance.next());
                 hGraphInstance.update(1423742720);
                 break;
 

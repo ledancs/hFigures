@@ -38,12 +38,10 @@ function HealthGraph(groups, w, className){
     function createSVG(className, w){
         var svg;
 
-        svg = d3.select("body")
-            .append("div")
-            .attr("class", className)
+        svg = d3.select("div." + className)
             .append("svg")
-            .attr("width", w)
-            .attr("height", w);
+            .attr("width", "100%")
+            .attr("height", "100%");
 
         return svg;
     }
@@ -354,6 +352,7 @@ function HealthGraph(groups, w, className){
     }
 
 
+
     // selects the sample closest to the timestamp provided but before that not after
     function getSampleIndex(timestamp, samples){
         var i;
@@ -363,12 +362,50 @@ function HealthGraph(groups, w, className){
         });
 
         for(i = 0; i < samples.length; i++){
-            if(samples[i].timestamp >= timestamp){
+            if(samples[i].timestamp === timestamp){
                 return i;
+            }
+            else if (samples[i].timestamp > timestamp){
+                break;
             }
         }
 
-        return --i;
+        --i; // return the index of the sample that is either at the exact time or before
+        return i < 0 ? 0: i;
+    }
+
+    // get next and previous samples
+    function getNext(){
+
+        // from the referenceTimestamp we find the closest following timestamp
+        // we return that timestamp
+        var referenceTimestamp = this.timestamp;
+        var closestNextTimestamp = -1;
+        var samples;
+        var timestampToCompare;
+        for(var i = 0; i < measurementsArray.length; i ++){
+            if(measurementsArray[i].label === "empty") continue; // discard the group label elements
+            samples = measurementsArray[i].samples;
+            samples.sort(function (a, b) { return a.timestamp - b.timestamp; }); // ascending order by timestamp
+
+            for(var j = 0; j < samples.length; j++){
+                timestampToCompare = samples[j].timestamp;
+                if(referenceTimestamp < timestampToCompare){
+                    if(closestNextTimestamp === -1){ // check if there is any value given to closestNextTimestamp
+                        closestNextTimestamp = timestampToCompare;
+                        // stop checking samples of this measurement because they are in ascending order
+                        break;
+                    }
+                    else if(closestNextTimestamp > timestampToCompare){ // we found a closer timestamp
+                        closestNextTimestamp = timestampToCompare;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return closestNextTimestamp === -1 ? referenceTimestamp: closestNextTimestamp;
+
     }
 
     function getColor(measurement, timestamp, className){
@@ -669,15 +706,6 @@ function HealthGraph(groups, w, className){
             .transition()
             .attr("d", function(d){
                 return getLabelLinePath(lineFunction, timestamps, d);
-            }).call(endAll, function(){
-
-                animationsComplete = true;
-
-                var callback;
-                while(callbacks.length > 0){
-                    callback = callbacks.pop();
-                    callback();
-                }
             });
     }
 
@@ -896,12 +924,9 @@ function HealthGraph(groups, w, className){
                 this.parentNode.appendChild(this);
             });
 
-        // if the initial graph has completed the last animation
-        if(animationsComplete) updatePlottedGraph(d3root, timestamp, polygon, circles);
-        // otherwise add it to the general callback array for later execution
-        else callbacks.push(function () {
-            updatePlottedGraph(d3root, timestamp, polygon, circles);
-        });
+
+
+        updatePlottedGraph(d3root, timestamp, polygon, circles);
 
         var plottedGraph = new Graph(circles, timestamp, polygon);
 
@@ -939,8 +964,8 @@ function HealthGraph(groups, w, className){
     function toggleZoom(){
         zoomedIn = !zoomedIn;
 
-        hGraph.selectAll("g.measurement").selectAll("g.label").attr("opacity", zoomedIn ? 1: 0.3);
-        hGraph.selectAll("g.measurement").selectAll("path").attr("opacity", zoomedIn ? 1: 0.3);
+        hGraph.selectAll("g.measurement").selectAll("g.label").attr("opacity", zoomedIn ? 1: 0);
+        hGraph.selectAll("g.measurement").selectAll("path").attr("opacity", zoomedIn ? 1: 0);
 
         hGraph.selectAll("g.groupLabel").selectAll("g.label").attr("opacity", zoomedIn ? 0.5: 1);
     }
@@ -1201,6 +1226,10 @@ function HealthGraph(groups, w, className){
 
     initialGraph.update = function(newTimestamp){
         updateFromInstance.apply(initialGraph, [newTimestamp]);
+    };
+
+    initialGraph.next = function(){
+        return getNext.apply(initialGraph);
     };
 
     initialGraph.plotAt = function (timestamp) {

@@ -868,7 +868,12 @@ function HealthGraph(groups, w, className){
         return rectangles;
     }
 
-    // creates the data objects for the group labels
+    /**
+     * creates the d3 data array to draw/plot the group labels
+     * @param groups
+     * @param measurementsDataObjects
+     * @returns {Array}
+     */
     function createGroupLabelDataObjects(groups, measurementsDataObjects){
 
         var startAngle = 0;
@@ -911,6 +916,12 @@ function HealthGraph(groups, w, className){
         return groupDataObjects;
     }
 
+    /**
+     * Create an additional graph
+     * @param d3root
+     * @param timestamp
+     * @returns {Graph}
+     */
     function plotAt(d3root, timestamp){
         var polygon;
         var circles;
@@ -924,12 +935,13 @@ function HealthGraph(groups, w, className){
                 this.parentNode.appendChild(this);
             });
 
-
-
         updatePlottedGraph(d3root, timestamp, polygon, circles);
 
         var plottedGraph = new Graph(circles, timestamp, polygon);
 
+        /**
+         * Pass only the update as a publicly accessible method
+         */
         plottedGraph.update = function(newTimestamp){
             updateFromInstance.apply(plottedGraph, [newTimestamp]);
         };
@@ -937,6 +949,13 @@ function HealthGraph(groups, w, className){
         return plottedGraph;
     }
 
+    /**
+     * Update an existing graph to a given timestamp
+     * @param d3root
+     * @param timestamp
+     * @param polygon
+     * @param circles
+     */
     function updatePlottedGraph(d3root, timestamp, polygon, circles){
 
         plottedTimestamps.push(timestamp); // add the timestamp to the array of plotted timestamps for detecting label collision
@@ -1029,6 +1048,11 @@ function HealthGraph(groups, w, className){
     }
 
 
+    /**
+     * on mouse over we change the style of the measurement circles and label (text and frame)
+     * @param group
+     * @param mouseOver
+     */
     function toggleMeasurementGroups(group, mouseOver){
 
         group.select("rect")
@@ -1219,11 +1243,19 @@ function HealthGraph(groups, w, className){
 
     svg.call(zoom);
 
-    // show and hide for zooming effects
+    // show and hide labels 
     prepareZooming();
 
+    /**
+     * class instantiation happens only inside this whole component
+     * @type {Graph}
+     */
     var initialGraph = new Graph(activeCircles, timestampToPlot, activePolygon);
 
+    /**
+     * Expose only the methods needed by the user
+     * This is a facade paradigm
+     */
     initialGraph.update = function(newTimestamp){
         updateFromInstance.apply(initialGraph, [newTimestamp]);
     };

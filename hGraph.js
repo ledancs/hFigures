@@ -9,7 +9,7 @@
  * @param className
  * @constructor
  */
-function HealthGraph(groups, w, className){
+function HealthGraph(groups, w, className, options){
 
     /*
      function angle(startAngle, endAngle) {
@@ -1081,7 +1081,7 @@ function HealthGraph(groups, w, className){
     // Here we begin to build the hGraph instance
     // all the functions used are inside this scope.
 
-    // TODO: adjust depending on the number of healthMeasurements along with the zoom and font size
+    var options = options || {};
 
     // Other options
     var outerRadius = w * 0.4; // check a scale function from d3
@@ -1119,12 +1119,8 @@ function HealthGraph(groups, w, className){
     var threshold = 1;
     var zoomedIn = false;
 
-    var minScale = 0.5;
-    var maxScale = 2.0;
-
-    var zoom = d3.behavior.zoom()
-        .scaleExtent([minScale, maxScale])
-        .on("zoom", zoomed);
+    var minScale = options.minScale || 0.5;
+    var maxScale = options.maxScale || 2.0;
 
     svg = createSVG(className, w);
     hGraph = createHGraph(svg);
@@ -1236,14 +1232,33 @@ function HealthGraph(groups, w, className){
     // polygon.attr("transform", scale + " " + rotate);
     // move the hGraph
 
-    var translate = "translate(" + (w * 1) + ", " + (w * 0.55) + ")";
-    hGraph.attr("transform", translate);
+    var maxWidth = 0;
+    var maxHeight = 0;
+    hGraph.selectAll("g.hasLabel")
+        .selectAll("g.label")
+        .each(function (d) {
+            maxWidth  = Math.max(maxWidth,  Math.abs(d.offset.x) + d.box.width);
+            maxHeight = Math.max(maxHeight, Math.abs(d.offset.y) + (d.box.height * 2));
+        });
+
+    maxWidth  *= minScale;
+    maxHeight *= minScale;
+
+    var zoom = d3.behavior.zoom()
+        .scaleExtent([minScale, maxScale])
+        .on("zoom", zoomed)
+        .translate([maxWidth, maxHeight]).scale(minScale);
+
+
+
+    svg.select("g.hGraph-wrapper")
+        .attr("transform", "translate(" + maxWidth + ", " + maxHeight + ") scale(" + minScale + ")");
 
     // activate the zoom
 
     svg.call(zoom);
 
-    // show and hide labels 
+    // show and hide labels
     prepareZooming();
 
     /**

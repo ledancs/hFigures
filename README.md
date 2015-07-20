@@ -1,1 +1,1 @@
-First implementation of hgraph from TUT using d3.js
+Inspired by the hGraph, hFigures aims to deliver a starting point for interactive health data visualization.

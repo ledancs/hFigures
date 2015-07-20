@@ -43,15 +43,15 @@
 <script charset="utf-8" src="d3.js"></script>
 <script charset="utf-8" src="dataPatientDiabetes.js"></script>
 
-<script src="hGraph.js" type="application/javascript"></script>
+<script src="hFigures.js" type="application/javascript"></script>
 
 <script type="text/javascript">
     var w = 1600;
     var className = "hGraph-container";
-    var hGraphInstance = HealthGraph(groups, w, className, {
+    var hFigureInstance = HealthFigure(groups, w, className, {
         minScale: 0.45
     }); // from data.js
-    var additionalGraph = hGraphInstance.plotAt(0);
+    var additionalFigure = hFigureInstance.plotAt(0);
 
     function keyDownTextField(e) {
 
@@ -61,22 +61,22 @@
 
             case 37:
                 // left arrow
-                hGraphInstance.update(0);
+                hFigureInstance.update(0);
                 break;
 
             case 39:
                 // right arrow
-                console.log("next ts : " + hGraphInstance.next());
-                hGraphInstance.update(1423742720);
+                console.log("next ts : " + hFigureInstance.next());
+                hFigureInstance.update(1423742720);
                 break;
 
             case 65:
                 // 'a' letter
-                additionalGraph.update(0);
+                additionalFigure.update(0);
                 break;
             case 68:
                 // 'd' letter
-                additionalGraph.update(1423742720);
+                additionalFigure.update(1423742720);
                 break;
         }
     }

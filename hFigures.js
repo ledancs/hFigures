@@ -9,7 +9,7 @@
  * @param className
  * @constructor
  */
-function HealthGraph(groups, w, className, options){
+function HealthFigure(groups, w, className, options){
 
     /*
      function angle(startAngle, endAngle) {
@@ -46,15 +46,15 @@ function HealthGraph(groups, w, className, options){
         return svg;
     }
 
-    function createHGraph(svg){
-        var hGraph;
+    function createHFigure(svg){
+        var hFigure;
 
-        hGraph = svg.append("g")
-            .attr("class", "hGraph-wrapper")
+        hFigure = svg.append("g")
+            .attr("class", "hFigure-wrapper")
             .append("g")
-            .attr("class", "hGraph");
+            .attr("class", "hFigure");
 
-        return hGraph;
+        return hFigure;
     }
 
     function createZones(d3target, measurementsDataObjects, arc){
@@ -108,7 +108,7 @@ function HealthGraph(groups, w, className, options){
     function updatePolygon(d3root, timestamp, polygon){
         polygonData = [];
 
-        d3root.selectAll("g.activeGraph")
+        d3root.selectAll("g.activeFigure")
             .selectAll("g.measurement")
             .each(function (d) {
                 polygonData.push(getArc(d.data, timestamp).centroid(d));
@@ -255,7 +255,7 @@ function HealthGraph(groups, w, className, options){
         y = coordinates[1] - d.box.height *.825;
 
         /*
-        hGraph.append("circle")
+        hFigure.append("circle")
             .attr("cx", coordinates[0])
             .attr("cy", y)
             .attr({
@@ -265,7 +265,7 @@ function HealthGraph(groups, w, className, options){
             });
 
 
-        hGraph.append("circle")
+        hFigure.append("circle")
             .attr("cx", coordinates[0])
             // .attr("cy", coordinates[1] + d.box.height *.2)
             .attr("cy", y + d.box.height)
@@ -917,16 +917,16 @@ function HealthGraph(groups, w, className, options){
     }
 
     /**
-     * Create an additional graph
+     * Create an additional figure
      * @param d3root
      * @param timestamp
-     * @returns {Graph}
+     * @returns {Figure}
      */
     function plotAt(d3root, timestamp){
         var polygon;
         var circles;
 
-        polygon = createSvgPolygon(hGraph, initialPolygonData, "passive");
+        polygon = createSvgPolygon(hFigure, initialPolygonData, "passive");
 
         circles = createMeasurementCircles(d3root, circleRadius, "passive");
 
@@ -935,28 +935,28 @@ function HealthGraph(groups, w, className, options){
                 this.parentNode.appendChild(this);
             });
 
-        updatePlottedGraph(d3root, timestamp, polygon, circles);
+        updatePlottedFigure(d3root, timestamp, polygon, circles);
 
-        var plottedGraph = new Graph(circles, timestamp, polygon);
+        var plottedFigure = new Figure(circles, timestamp, polygon);
 
         /**
          * Pass only the update as a publicly accessible method
          */
-        plottedGraph.update = function(newTimestamp){
-            updateFromInstance.apply(plottedGraph, [newTimestamp]);
+        plottedFigure.update = function(newTimestamp){
+            updateFromInstance.apply(plottedFigure, [newTimestamp]);
         };
 
-        return plottedGraph;
+        return plottedFigure;
     }
 
     /**
-     * Update an existing graph to a given timestamp
+     * Update an existing figure to a given timestamp
      * @param d3root
      * @param timestamp
      * @param polygon
      * @param circles
      */
-    function updatePlottedGraph(d3root, timestamp, polygon, circles){
+    function updatePlottedFigure(d3root, timestamp, polygon, circles){
 
         plottedTimestamps.push(timestamp); // add the timestamp to the array of plotted timestamps for detecting label collision
 
@@ -983,10 +983,10 @@ function HealthGraph(groups, w, className, options){
     function toggleZoom(){
         zoomedIn = !zoomedIn;
 
-        hGraph.selectAll("g.measurement").selectAll("g.label").attr("opacity", zoomedIn ? 1: 0);
-        hGraph.selectAll("g.measurement").selectAll("path").attr("opacity", zoomedIn ? 1: 0);
+        hFigure.selectAll("g.measurement").selectAll("g.label").attr("opacity", zoomedIn ? 1: 0);
+        hFigure.selectAll("g.measurement").selectAll("path").attr("opacity", zoomedIn ? 1: 0);
 
-        hGraph.selectAll("g.groupLabel").selectAll("g.label").attr("opacity", zoomedIn ? 0.5: 1);
+        hFigure.selectAll("g.groupLabel").selectAll("g.label").attr("opacity", zoomedIn ? 0.5: 1);
     }
 
 
@@ -995,7 +995,7 @@ function HealthGraph(groups, w, className, options){
 
         if(zoomIn(d3.event.scale, prevScale) || zoomOut(d3.event.scale, prevScale)) toggleZoom();
 
-        svg.select("g.hGraph-wrapper")
+        svg.select("g.hFigure-wrapper")
             .attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
 
         prevScale = d3.event.scale;
@@ -1023,13 +1023,13 @@ function HealthGraph(groups, w, className, options){
 
         plottedTimestamps[i] = newTimestamp;
 
-        updatePolygon(hGraph, newTimestamp, polygon);
+        updatePolygon(hFigure, newTimestamp, polygon);
         updateMeasurements(circles, newTimestamp);
 
         if(circles.attr("class") === "active")
-            updateLabels(hGraph, newTimestamp);
+            updateLabels(hFigure, newTimestamp);
 
-        moveLabelsWrapper(hGraph, plottedTimestamps);
+        moveLabelsWrapper(hFigure, plottedTimestamps);
 
         this.timestamp = newTimestamp;
     }
@@ -1041,7 +1041,7 @@ function HealthGraph(groups, w, className, options){
      * @param polygon
      * @constructor
      */
-    function Graph (circles, timestamp, polygon){
+    function Figure (circles, timestamp, polygon){
         this.circles = circles;
         this.timestamp = timestamp;
         this.polygon = polygon;
@@ -1078,7 +1078,7 @@ function HealthGraph(groups, w, className, options){
      * begin the main code
      */
 
-    // Here we begin to build the hGraph instance
+    // Here we begin to build the hFigure instance
     // all the functions used are inside this scope.
 
     var options = options || {};
@@ -1094,7 +1094,7 @@ function HealthGraph(groups, w, className, options){
     var circleRadius = 8;
 
     var svg;
-    var hGraph; // and SVG group
+    var hFigure; // and SVG group
 
     var timestampToPlot = new Date().getTime();
     var plottedTimestamps = [];
@@ -1123,7 +1123,7 @@ function HealthGraph(groups, w, className, options){
     var maxScale = options.maxScale || 2.0;
 
     svg = createSVG(className, w);
-    hGraph = createHGraph(svg);
+    hFigure = createHFigure(svg);
 
     arc = d3.svg.arc()
         .innerRadius(innerRadius)
@@ -1144,7 +1144,7 @@ function HealthGraph(groups, w, className, options){
     measurementsObjects = pie(measurementsArray); // add the start and end of the angle
     // console.log(measurementsDataObjects);
 
-    createZones(hGraph, measurementsObjects, arc);
+    createZones(hFigure, measurementsObjects, arc);
 
     groupsObjects = createGroupLabelDataObjects(groups, measurementsObjects);
 
@@ -1160,10 +1160,10 @@ function HealthGraph(groups, w, className, options){
 
     polygonData = initialPolygonData;
 
-    hGraph.append("g")
+    hFigure.append("g")
         .attr("class", "groupLabels");
 
-    hGraph.selectAll("g.groupLabels")
+    hFigure.selectAll("g.groupLabels")
         .selectAll("g.groupLabel")
         .data(groupsObjects)
         .enter()
@@ -1171,33 +1171,33 @@ function HealthGraph(groups, w, className, options){
         .attr("class", "groupLabel hasLabel");
 
 
-    // create the graph container
-    hGraph.append("g")
-        .attr("class", "graphs");
+    // create the figure container
+    hFigure.append("g")
+        .attr("class", "figures");
 
-    // create the active graph
-    hGraph.selectAll("g.graphs")
+    // create the active figure
+    hFigure.selectAll("g.figures")
         .append("g")
-        .attr("class", "graph activeGraph");
+        .attr("class", "figure activeFigure");
 
-    hGraph.selectAll("g.activeGraph")
+    hFigure.selectAll("g.activeFigure")
         .append("g")
         .attr("class", "polygons");
 
-    activePolygon = createSvgPolygon(hGraph, polygonData, "active");
+    activePolygon = createSvgPolygon(hFigure, polygonData, "active");
 
-    hGraph.selectAll("g.activeGraph")
+    hFigure.selectAll("g.activeFigure")
         .append("g")
         .attr("class", "measurements"); // wrapper for all measurements
 
-    var svgMeasurementGroups = createSvgMeasurementGroups(hGraph, measurementsObjects); // create a svg group for each measurement
+    var svgMeasurementGroups = createSvgMeasurementGroups(hFigure, measurementsObjects); // create a svg group for each measurement
 
     //measurementsDataObjects.concat(zonesDataObjects)
 
     // label groups and required elements
-    createSvgLabelGroups(hGraph);
+    createSvgLabelGroups(hFigure);
     // create the circles in each of the SVG group with the class "measurement"
-    activeCircles = createMeasurementCircles(hGraph, circleRadius, "active");
+    activeCircles = createMeasurementCircles(hFigure, circleRadius, "active");
 
     svgMeasurementGroups.on("mouseover", function(d){
         toggleMeasurementGroups(d3.select(this), true);
@@ -1207,16 +1207,16 @@ function HealthGraph(groups, w, className, options){
 
     // here we can call the update functions
 
-    updateLabels(hGraph, timestampToPlot);
-    updatePlottedGraph(hGraph, timestampToPlot, activePolygon, activeCircles);
+    updateLabels(hFigure, timestampToPlot);
+    updatePlottedFigure(hFigure, timestampToPlot, activePolygon, activeCircles);
 
 
     // test the update action
     /*
     setTimeout(function () {
-        updatePolygon(hGraph, 1); // testing the methods
-        updateMeasurements(hGraph, 1); // testing the methods
-        updateLabels(hGraph, 1);
+        updatePolygon(hFigure, 1); // testing the methods
+        updateMeasurements(hFigure, 1); // testing the methods
+        updateLabels(hFigure, 1);
     }, 3000);
     */
 
@@ -1230,11 +1230,11 @@ function HealthGraph(groups, w, className, options){
     // arcs.attr("transform", transformations.join(" "));
     // pointsGroup.attr("transform", scale + " " + rotate);
     // polygon.attr("transform", scale + " " + rotate);
-    // move the hGraph
+    // move the hFigure
 
     var maxWidth = 0;
     var maxHeight = 0;
-    hGraph.selectAll("g.hasLabel")
+    hFigure.selectAll("g.hasLabel")
         .selectAll("g.label")
         .each(function (d) {
             maxWidth  = Math.max(maxWidth,  Math.abs(d.offset.x) + d.box.width);
@@ -1251,7 +1251,7 @@ function HealthGraph(groups, w, className, options){
 
 
 
-    svg.select("g.hGraph-wrapper")
+    svg.select("g.hFigure-wrapper")
         .attr("transform", "translate(" + maxWidth + ", " + maxHeight + ") scale(" + minScale + ")");
 
     // activate the zoom
@@ -1263,28 +1263,28 @@ function HealthGraph(groups, w, className, options){
 
     /**
      * class instantiation happens only inside this whole component
-     * @type {Graph}
+     * @type {Figure}
      */
-    var initialGraph = new Graph(activeCircles, timestampToPlot, activePolygon);
+    var initialFigure = new Figure(activeCircles, timestampToPlot, activePolygon);
 
     /**
      * Expose only the methods needed by the user
      * This is a facade paradigm
      */
-    initialGraph.update = function(newTimestamp){
-        updateFromInstance.apply(initialGraph, [newTimestamp]);
+    initialFigure.update = function(newTimestamp){
+        updateFromInstance.apply(initialFigure, [newTimestamp]);
     };
 
-    initialGraph.next = function(){
-        return getNext.apply(initialGraph);
+    initialFigure.next = function(){
+        return getNext.apply(initialFigure);
     };
 
-    initialGraph.plotAt = function (timestamp) {
-        return plotAt(hGraph, timestamp);
+    initialFigure.plotAt = function (timestamp) {
+        return plotAt(hFigure, timestamp);
 
     };
 
-    return initialGraph;
+    return initialFigure;
 
 }
 

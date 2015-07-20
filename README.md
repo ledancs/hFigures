@@ -21,4 +21,4 @@ When zooming in, the labels for each measurement will become visible.
 
 Acknowledgements
 ----------------
-This research was supported jointly by TEKES (the Finnish Funding Agency for Technology and Innovation) as part of the Digital Health Revolution, as well as the European Commission and TEKES under the ARTEMIS-JU WithMe project.
+This research was supported jointly by TEKES (the Finnish Funding Agency for Technology and Innovation) as part of the Digital Health Revolution and by the European Commission and TEKES under the ARTEMIS-JU WithMe project.

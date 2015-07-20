@@ -1,6 +1,6 @@
 Health Figures
 ==============
-Inspired by the hGraph, hFigures aims to deliver a starting point for interactive health data visualization.
+Inspired by the hGraph, hFigures is a javascript library that aims to deliver a starting point for interactive health data visualization.
 
 The file `simple.html` is an example using a small dataset comprising basic health measurements.
 

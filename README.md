@@ -6,7 +6,7 @@ The file `simple.html` is an example using a small dataset comprising basic heal
 
 For a holistic visualization of a complex dataset, the file `complex.html` provides an overview of the library visualization capabilities.
 
-This library has been submited as a Software article BMC Medical Informatics and Decision Making Journal.
+This library has been submited as a Software article to the BMC Medical Informatics and Decision Making journal.
 
 ### Requirements
 hFigures was built with [d3.js](http://d3js.org/), a copy of the library is included in this repository. All rights and license terms apply to the d3.js library accordingly.

@@ -22,6 +22,15 @@ Use the mouse wheel to zoom in and out of the figure.
 
 When zooming in, the labels for each measurement will become visible.
 
+### Visualization
+
+
+The file `simple.html` is displayed in the following figure as a static PNG image.
+
+
+![hFigures Example](img/figureHFiguresSimple.png?raw=true "hFigures Example")
+
+
 Acknowledgements
 ----------------
 This research was supported jointly by TEKES (the Finnish Funding Agency for Technology and Innovation) as part of the Digital Health Revolution and by the European Commission and TEKES under the ARTEMIS-JU WithMe project.

@@ -31,6 +31,18 @@ The file `simple.html` is displayed in the following figure as a static PNG imag
 ![hFigures Example](img/figureHFiguresSimple.png?raw=true "hFigures Example")
 
 
+### Live Demo
+
+
+Currently we are working on having a permanent site were everyone could use a live demo of hFigures.
+At the moment, Petteri Ponsimaa from University of Oulu has applied the visualization to the frequent shopper dataset obtained from one of Finland's biggest retailer.
+He based the groups of measurements according to the Findiet 2012 survey.
+The recommended targets are according to the recommendations from the National Nutrition Council.
+
+
+[Click here to see Petteri's live demo.](http://interact.oulu.fi/hFigures/nutrition.html)
+
+
 Acknowledgements
 ----------------
 This research was supported jointly by TEKES (the Finnish Funding Agency for Technology and Innovation) as part of the Digital Health Revolution and by the European Commission and TEKES under the ARTEMIS-JU WithMe project.

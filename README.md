@@ -35,7 +35,7 @@ The file `simple.html` is displayed in the following figure as a static PNG imag
 
 
 Currently we are working on having a permanent site were everyone could use a live demo of hFigures.
-At the moment, Petteri Ponsimaa from University of Oulu has applied the visualization to the frequent shopper dataset obtained from one of Finland's biggest retailer.
+At the moment, Petteri Ponsimaa from University of Oulu has applied the visualization to the frequent shopper dataset obtained from one of Finland's biggest retailers.
 He based the groups of measurements according to the Findiet 2012 survey.
 The recommended targets are according to the recommendations from the National Nutrition Council.
 

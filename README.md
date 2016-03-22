@@ -6,7 +6,10 @@ The file `simple.html` is an example using a small dataset comprising basic heal
 
 For a holistic visualization of a complex dataset, the file `complex.html` provides an overview of the library visualization capabilities.
 
-This library has been submited as a Software article to the BMC Medical Informatics and Decision Making journal.
+The implementation and evaluation of this library has been published as a Software article in the BMC Medical Informatics and Decision Making journal. The article is available [online](http://bmcmedinformdecismak.biomedcentral.com/articles/10.1186/s12911-016-0275-6).
+
+Please cite the article if you have used the library on your research work.
+DOI: 10.1186/s12911-016-0275-6
 
 ### Requirements
 hFigures was built with [d3.js](http://d3js.org/), a copy of the library is included in this repository. All rights and license terms apply to the d3.js library accordingly.
@@ -33,15 +36,9 @@ The file `simple.html` is displayed in the following figure as a static PNG imag
 
 ### Live Demo
 
+Currently we are working on having a permanent site were everyone could use a live demo of hFigures. At the moment, Petteri Ponsimaa from University of Oulu has applied the visualization to the frequent shopper dataset obtained from one of Finland's biggest retailers. He based the groups of measurements according to the Findiet 2012 survey. The recommended targets are according to the recommendations from the National Nutrition Council.
 
-Currently we are working on having a permanent site were everyone could use a live demo of hFigures.
-At the moment, Petteri Ponsimaa from University of Oulu has applied the visualization to the frequent shopper dataset obtained from one of Finland's biggest retailers.
-He based the groups of measurements according to the Findiet 2012 survey.
-The recommended targets are according to the recommendations from the National Nutrition Council.
-
-
-[Click here to see Petteri's live demo.](http://interact.oulu.fi/hFigures/nutrition.html)
-
+[Click here to see Petteri's live demo](http://interact.oulu.fi/hFigures/nutrition.html).
 
 Acknowledgements
 ----------------

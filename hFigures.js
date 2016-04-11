@@ -466,8 +466,7 @@ function HealthFigure(groups, w, className, options){
     function createSvgMeasurementGroups(d3root, data){
         var svgGroups;
 
-        svgGroups = d3root.selectAll("g.measurements")
-            .selectAll("g.measurement")
+        svgGroups = d3root.selectAll("g.measurement")
             .data(data)
             .enter()
             .append("g")
@@ -1089,7 +1088,7 @@ function HealthFigure(groups, w, className, options){
     var defaultLabelRadius = w * 0.45;
 
     var groupLabelFontSize = 24;
-    var measurementLabelFontSize = 12;
+    var measurementLabelFontSize = 16;
 
     var circleRadius = 8;
 
@@ -1186,18 +1185,18 @@ function HealthFigure(groups, w, className, options){
 
     activePolygon = createSvgPolygon(hFigure, polygonData, "active");
 
-    hFigure.selectAll("g.activeFigure")
+    var activeMeasurements = hFigure.selectAll("g.activeFigure")
         .append("g")
         .attr("class", "measurements"); // wrapper for all measurements
 
-    var svgMeasurementGroups = createSvgMeasurementGroups(hFigure, measurementsObjects); // create a svg group for each measurement
+    var svgMeasurementGroups = createSvgMeasurementGroups(activeMeasurements, measurementsObjects); // create a svg group for each measurement
 
     //measurementsDataObjects.concat(zonesDataObjects)
 
     // label groups and required elements
     createSvgLabelGroups(hFigure);
     // create the circles in each of the SVG group with the class "measurement"
-    activeCircles = createMeasurementCircles(hFigure, circleRadius, "active");
+    activeCircles = createMeasurementCircles(activeMeasurements, circleRadius, "active");
 
     svgMeasurementGroups.on("mouseover", function(d){
         toggleMeasurementGroups(d3.select(this), true);
@@ -1234,8 +1233,7 @@ function HealthFigure(groups, w, className, options){
 
     var maxWidth = 0;
     var maxHeight = 0;
-    hFigure.selectAll("g.hasLabel")
-        .selectAll("g.label")
+    hFigure.selectAll("g.groupLabel")
         .each(function (d) {
             maxWidth  = Math.max(maxWidth,  Math.abs(d.offset.x) + d.box.width);
             maxHeight = Math.max(maxHeight, Math.abs(d.offset.y) + (d.box.height * 2));
@@ -1248,8 +1246,6 @@ function HealthFigure(groups, w, className, options){
         .scaleExtent([minScale, maxScale])
         .on("zoom", zoomed)
         .translate([maxWidth, maxHeight]).scale(minScale);
-
-
 
     svg.select("g.hFigure-wrapper")
         .attr("transform", "translate(" + maxWidth + ", " + maxHeight + ") scale(" + minScale + ")");
@@ -1266,6 +1262,14 @@ function HealthFigure(groups, w, className, options){
      * @type {Figure}
      */
     var initialFigure = new Figure(activeCircles, timestampToPlot, activePolygon);
+    
+    // activeMeasurements
+    
+    var activeMeasurementsParent = d3.select("g.measurements").node();
+    
+    d3.selectAll("g.measurement").each(function(){
+        activeMeasurementsParent.appendChild(this);
+    });
 
     /**
      * Expose only the methods needed by the user

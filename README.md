@@ -2,7 +2,7 @@ Health Figures
 ==============
 Inspired by the hGraph, hFigures is a javascript library that aims to deliver a starting point for interactive health data visualization.
 
-The file `simple.html` is an example using a small dataset comprising basic health measurements.
+The file `simple.html` is an example using a small dataset comprising basic health measurements. It can also be navigated via the [live version, which can be found here](http://ledancs.github.io/hFigures/).
 
 For a holistic visualization of a complex dataset, the file `complex.html` provides an overview of the library visualization capabilities.
 
